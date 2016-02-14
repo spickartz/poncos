@@ -9,6 +9,7 @@
  */
 
 #include "pons.hpp"
+#include "time_measure.hpp"
 #include "vendor/distgend/distgend.h"
 #include "vendor/ponci/ponci.hpp"
 
@@ -85,27 +86,7 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 	assert(false);
 }
 
-int main(/*int argc, char const *argv[]*/) {
-	// fill the command qeue
-	std::cout << "Reading command queue ...";
-	std::cout.flush();
-	std::vector<std::string> command_queue;
-	read_command_queue("macsnb.queue", command_queue);
-	std::cout << " done!" << std::endl;
-
-	distgend_initT distgen_init;
-	distgen_init.SMT_factor = 2;
-	distgen_init.NUMA_domains = 1;
-	distgen_init.number_of_threads = 8;
-
-	std::cout << "Starting distgen initialization ...";
-	std::cout.flush();
-	distgend_init(distgen_init);
-	std::cout << " done!" << std::endl << std::endl;
-
-	// TODO measure time
-	// TODO add consecutive execution
-
+static void coschedule_queue(const std::vector<std::string> &command_queue) {
 	for (auto command : command_queue) {
 		// wait until workers_active < MAX_WORKERS
 		std::unique_lock<std::mutex> work_counter_lock(worker_counter_mutex);
@@ -146,6 +127,38 @@ int main(/*int argc, char const *argv[]*/) {
 			}
 		}
 	}
+}
+
+int main(int argc, char const *argv[]) {
+
+	if (argc != 2) {
+		std::cout << "Usage: pons_macsnb <config file>" << std::endl;
+		return 0;
+	}
+
+	assert(argc == 2);
+	std::string queue_filename(argv[1]);
+
+	// fill the command qeue
+	std::cout << "Reading command queue " << queue_filename << " ...";
+	std::cout.flush();
+	std::vector<std::string> command_queue;
+	read_command_queue(queue_filename, command_queue);
+	std::cout << " done!" << std::endl;
+
+	distgend_initT distgen_init;
+	distgen_init.SMT_factor = 2;
+	distgen_init.NUMA_domains = 2;
+	distgen_init.number_of_threads = 32;
+
+	std::cout << "Starting distgen initialization ...";
+	std::cout.flush();
+	distgend_init(distgen_init);
+	std::cout << " done!" << std::endl << std::endl;
+
+	// TODO measure time
+	std::cout << "total runtime: " << time_measure<>::execute(coschedule_queue, command_queue) << " ms" << std::endl;
+	// TODO add consecutive execution
 
 	// wait until all workers are finished before deleting the cgroup
 	std::unique_lock<std::mutex> work_counter_lock(worker_counter_mutex);
