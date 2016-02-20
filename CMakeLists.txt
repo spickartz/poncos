@@ -15,6 +15,8 @@ string( TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE )
 ########
 # General project settings
 project(pons)
+# Enable support for external projects
+include(ExternalProject)
 ########
 
 ########
@@ -69,10 +71,41 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 ########
 
+########
+# ponci
+ExternalProject_Add(libponci
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ponci
+    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ponci
+    BUILD_IN_SOURCE 0
+    BUILD_COMMAND ${MAKE})
+
+# Store ponci variable in directory
+ExternalProject_Get_Property(libponci install_dir)
+set (libponci_path ${install_dir})
+include_directories(${libponci_path}/include)
+link_directories(${libponci_path}/lib)
+########
+
+########
+# distgend
+ExternalProject_Add(libdistgend
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/distgend
+    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/distgend
+    BUILD_IN_SOURCE 0
+    BUILD_COMMAND ${MAKE})
+
+# Store distgend variable in directory
+ExternalProject_Get_Property(libdistgend install_dir)
+set (libdistgend_path ${install_dir})
+include_directories(${libdistgend_path}/include)
+link_directories(${libdistgend_path}/lib)
+########
 
 ########
 # Compiling and linking
-add_executable(pons_macsnb pons_macsnb.cpp vendor/distgend/distgen_internal.c vendor/distgend/distgend.c vendor/ponci/ponci.cpp)
+add_executable(pons_macsnb pons_macsnb.cpp)
+add_dependencies(pons_macsnb libdistgend libponci)
+target_link_libraries(pons_macsnb distgend ponci)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
 set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
 ########
