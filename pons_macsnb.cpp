@@ -28,8 +28,10 @@
 static constexpr size_t MAX_WORKERS = 2;
 
 // TODO merge these two. requires changes to the libraries
-static const sched_configT co_configs[MAX_WORKERS] = {{{0, 1}, {0}}, {{6, 7}, {0}}};
-static const distgend_configT co_configs_dist[MAX_WORKERS] = {{2, {0, 1}}, {2, {6, 7}}};
+static const sched_configT co_configs[MAX_WORKERS] = {{{0, 1, 2, 3, 8, 9, 10, 11}, {0, 1}},
+													  {{4, 5, 6, 7, 12, 13, 14, 15}, {0, 1}}};
+static const distgend_configT co_configs_dist[MAX_WORKERS] = {{8, {0, 1, 2, 3, 8, 9, 10, 11}},
+															  {8, {4, 5, 6, 7, 12, 13, 14, 15}}};
 
 // VARIABLES
 static size_t cgroups_counter = 0;
@@ -48,16 +50,20 @@ static void execute_command_internal(std::string command, std::string cg_name, s
 	cgroup_add_me(cg_name);
 
 	command += " 2>&1 ";
-	command += "| tee ";
+	// command += "| tee ";
+	command += "> ";
 	command += cg_name + ".log";
 
 	assert(system(command.c_str()) != -1);
+
+	std::cout << ">> \t '" << command << "' completed at configuration " << config_used << std::endl;
 
 	// we are done
 	// call the boss
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 	--workers_active;
 	co_config_in_use[config_used] = false;
+	co_config_distgend[config_used] = 0;
 	worker_counter_cv.notify_one();
 }
 
@@ -69,8 +75,11 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 	cgroup_create(cg_name);
 	++cgroups_counter;
 
+	std::cout << ">> \t starting '" << command << "' at configuration ";
+
 	for (size_t i = 0; i < MAX_WORKERS; ++i) {
 		if (!co_config_in_use[i]) {
+			std::cout << i << std::endl;
 			co_config_in_use[i] = true;
 			co_config_cgroup_name[i] = cg_name;
 			cgroup_set_cpus(cg_name, co_configs[i].cpus);
@@ -97,7 +106,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 
 		// check if two are running
 		if (co_config_in_use[0] && co_config_in_use[1]) {
-			std::cout << "0: freezing old" << std::endl;
+			// std::cout << "0: freezing old" << std::endl;
 			cgroup_freeze(co_config_cgroup_name[old_config]);
 		}
 
@@ -107,24 +116,32 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 		// TODO wait until cgroup frozen
 
 		// measure distgen result
+		std::cout << ">> \t Running distgend at " << old_config << std::endl;
 		co_config_distgend[new_config] = distgend_is_membound(co_configs_dist[old_config]);
-		std::cout << "distgend: " << co_config_distgend[new_config] << std::endl;
+
+		std::cout << ">> \t Result " << co_config_distgend[new_config] << std::endl;
 
 		if (co_config_in_use[0] && co_config_in_use[1]) {
-			std::cout << "0: thaw old" << std::endl;
+			// std::cout << "0: thaw old" << std::endl;
 			cgroup_thaw(co_config_cgroup_name[old_config]);
 
+			std::cout << ">> \t Estimating usage of " << co_config_distgend[0] + co_config_distgend[1];
+
 			if (co_config_distgend[0] + co_config_distgend[1] < 1.0) {
-				std::cout << "0: freezing new" << std::endl;
+				std::cout << " -> we will run both";
+				// std::cout << "0: freezing new" << std::endl;
 				cgroup_freeze(co_config_cgroup_name[new_config]);
 				work_counter_lock.unlock();
 
-				std::cout << "0: wait for old" << std::endl;
+				// std::cout << "0: wait for old" << std::endl;
 				threads[co_config_thread_index[old_config]].join();
 
-				std::cout << "0: thaw new" << std::endl;
+				// std::cout << "0: thaw new" << std::endl;
 				cgroup_thaw(co_config_cgroup_name[new_config]);
+			} else {
+				std::cout << " -> we will run only one application";
 			}
+			std::cout << std::endl;
 		}
 	}
 }
@@ -156,8 +173,20 @@ int main(int argc, char const *argv[]) {
 	distgend_init(distgen_init);
 	std::cout << " done!" << std::endl << std::endl;
 
+	{
+		distgend_configT config;
+		for (size_t i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
+			config.number_of_threads = i + 1;
+			config.threads_to_use[i] = i;
+			std::cout << "Using " << i + 1 << " threads:" << std::endl;
+			std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
+			std::cout << std::endl;
+		}
+	}
+
 	// TODO measure time
-	std::cout << "total runtime: " << time_measure<>::execute(coschedule_queue, command_queue) << " ms" << std::endl;
+	const auto runtime = time_measure<>::execute(coschedule_queue, command_queue);
+	std::cout << "total runtime: " << runtime << " ms" << std::endl;
 	// TODO add consecutive execution
 
 	// wait until all workers are finished before deleting the cgroup
