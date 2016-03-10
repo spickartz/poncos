@@ -1,5 +1,0 @@
-heat -r 5000 -i 1000 -a 2 -t 2
-heat -r 5000 -i 1000 -a 2 -t 2
-echo "12345"
-echo "Test"
-echo "Alles mist"

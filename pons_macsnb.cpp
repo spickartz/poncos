@@ -9,9 +9,9 @@
  */
 
 #include "pons.hpp"
+#include "distgen/distgen.h"
+#include "ponci/ponci.hpp"
 #include "time_measure.hpp"
-#include "vendor/distgend/distgend.h"
-#include "vendor/ponci/ponci.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -28,6 +28,11 @@
 static constexpr size_t MAX_WORKERS = 2;
 
 // TODO merge these two. requires changes to the libraries
+// static const sched_configT co_configs[MAX_WORKERS] = {{{0}, {0}}, {{1}, {0}}};
+// static const distgend_configT co_configs_dist[MAX_WORKERS] = {{1, {0}}, {1, {1}}};
+// static const distgend_initT distgen_init = {2, 1, 2};
+
+static const distgend_initT distgen_init = {32, 2, 2};
 static const sched_configT co_configs[MAX_WORKERS] = {{{0, 1, 2, 3, 8, 9, 10, 11}, {0, 1}},
 													  {{4, 5, 6, 7, 12, 13, 14, 15}, {0, 1}}};
 static const distgend_configT co_configs_dist[MAX_WORKERS] = {{8, {0, 1, 2, 3, 8, 9, 10, 11}},
@@ -125,10 +130,14 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 			// std::cout << "0: thaw old" << std::endl;
 			cgroup_thaw(co_config_cgroup_name[old_config]);
 
-			std::cout << ">> \t Estimating usage of " << co_config_distgend[0] + co_config_distgend[1];
+			std::cout << ">> \t Estimating total usage of "
+					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
 
-			if (co_config_distgend[0] + co_config_distgend[1] < 1.0) {
-				std::cout << " -> we will run both";
+			// 0.4 + 0.4 => 1 laufen lassen
+			// 0.4 + 0.9 => beiden laufen lassen
+			// if (co_config_distgend[0] + co_config_distgend[1] < 0.9) {
+			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
+				std::cout << " -> we will run one" << std::endl;
 				// std::cout << "0: freezing new" << std::endl;
 				cgroup_freeze(co_config_cgroup_name[new_config]);
 				work_counter_lock.unlock();
@@ -139,10 +148,20 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 				// std::cout << "0: thaw new" << std::endl;
 				cgroup_thaw(co_config_cgroup_name[new_config]);
 			} else {
-				std::cout << " -> we will run only one application";
+				std::cout << " -> we will run both applications" << std::endl;
 			}
-			std::cout << std::endl;
+
+		} else {
+			std::cout << ">> \t Just one config in use ATM" << std::endl;
 		}
+	}
+
+	// wait until all workers are finished before deleting the cgroup
+	std::unique_lock<std::mutex> work_counter_lock(worker_counter_mutex);
+	worker_counter_cv.wait(work_counter_lock, [] { return workers_active == 0; });
+
+	for (auto &t : threads) {
+		if (t.joinable()) t.join();
 	}
 }
 
@@ -163,11 +182,6 @@ int main(int argc, char const *argv[]) {
 	read_command_queue(queue_filename, command_queue);
 	std::cout << " done!" << std::endl;
 
-	distgend_initT distgen_init;
-	distgen_init.SMT_factor = 2;
-	distgen_init.NUMA_domains = 2;
-	distgen_init.number_of_threads = 32;
-
 	std::cout << "Starting distgen initialization ...";
 	std::cout.flush();
 	distgend_init(distgen_init);
@@ -184,18 +198,9 @@ int main(int argc, char const *argv[]) {
 		}
 	}
 
-	// TODO measure time
 	const auto runtime = time_measure<>::execute(coschedule_queue, command_queue);
 	std::cout << "total runtime: " << runtime << " ms" << std::endl;
 	// TODO add consecutive execution
-
-	// wait until all workers are finished before deleting the cgroup
-	std::unique_lock<std::mutex> work_counter_lock(worker_counter_mutex);
-	worker_counter_cv.wait(work_counter_lock, [] { return workers_active == 0; });
-
-	for (auto &t : threads) {
-		if (t.joinable()) t.join();
-	}
 
 	for (size_t i = 0; i < cgroups_counter; ++i) {
 		cgroup_delete(cgroup_name_from_id(i));

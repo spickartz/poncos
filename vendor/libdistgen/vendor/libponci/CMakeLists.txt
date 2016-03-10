@@ -14,13 +14,12 @@ string( TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE )
 
 ########
 # General project settings
-project(poncos)
-# Enable support for external projects
-include(ExternalProject)
+project(ponci)
 ########
 
 ########
 # Compiler/linker options based on the different compilers
+#ADD_DEFINITIONS(-std=c++11)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Using Clang
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
@@ -29,11 +28,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
     ADD_DEFINITIONS(-g3 -O0 -Weverything)
-
-    ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow)
   endif()
-
-
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Using GCC
@@ -59,53 +54,23 @@ endif()
 ########
 
 ########
-# OpenMP
-find_package(OpenMP REQUIRED)
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-########
-
-########
 # Threads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 ########
 
 ########
-# libponci
-ExternalProject_Add(libponci
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
-    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
-    BUILD_IN_SOURCE 0
-    BUILD_COMMAND ${MAKE})
-
-# Store ponci variable in directory
-ExternalProject_Get_Property(libponci install_dir)
-set (libponci_path ${install_dir})
-include_directories(${libponci_path}/include)
-link_directories(${libponci_path}/lib)
-########
-
-########
-# libdistgen
-ExternalProject_Add(libdistgen
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libdistgen
-    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libdistgen
-    BUILD_IN_SOURCE 0
-    BUILD_COMMAND ${MAKE})
-
-# Store distgend variable in directory
-ExternalProject_Get_Property(libdistgen install_dir)
-set (libdistgen_path ${install_dir})
-include_directories(${libdistgen_path}/include)
-link_directories(${libdistgen_path}/lib)
-########
-
-########
 # Compiling and linking
-add_executable(pons_macsnb pons_macsnb.cpp)
-add_dependencies(pons_macsnb libdistgen libponci)
-target_link_libraries(pons_macsnb distgen ponci)
-set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
-set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
+include_directories(include)
+
+add_library(ponci src/ponci.cpp)
+set_property(TARGET ponci PROPERTY CXX_STANDARD 11)
+INSTALL(TARGETS ponci DESTINATION "lib")
+INSTALL(FILES include/ponci/ponci.h include/ponci/ponci.hpp DESTINATION "include/ponci")
+
+
+add_executable(ponci_example src/example.cpp)
+set_property(TARGET ponci_example PROPERTY CXX_STANDARD 11)
+target_link_libraries(ponci_example ponci)
+target_link_libraries(ponci_example Threads::Threads)
 ########
