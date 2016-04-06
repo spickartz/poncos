@@ -101,9 +101,11 @@ include_directories(${libdistgen_path}/include)
 link_directories(${libdistgen_path}/lib)
 ########
 
+include_directories(include)
+
 ########
 # Compiling and linking
-add_executable(pons_macsnb pons_macsnb.cpp)
+add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
 add_dependencies(pons_macsnb libdistgen libponci)
 target_link_libraries(pons_macsnb distgen ponci)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
