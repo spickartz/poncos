@@ -146,7 +146,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 	worker_counter_cv.wait(work_counter_lock, [] { return workers_active == 0; });
 }
 
-void cleanup() {
+static void cleanup() {
 	for (auto &t : threads) {
 		if (t.joinable()) t.join();
 	}
