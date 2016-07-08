@@ -36,7 +36,6 @@ constexpr size_t SLOTS = 2;
 extern const sched_configT co_configs[SLOTS];
 extern const distgend_initT distgen_init;
 
-void print_distgen_results();
 void read_command_queue(std::string filename, std::vector<std::string> &command_queue);
 std::string cgroup_name_from_id(size_t id);
 

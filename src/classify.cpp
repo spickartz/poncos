@@ -32,6 +32,18 @@ static std::vector<double> dg_res;
 // catch this signal, because the execute_command_internal thread will recieve SIG_TERM
 static void kill_handler(int) {}
 
+static void print_distgen_results() {
+	assert(distgen_init.number_of_threads / distgen_init.SMT_factor - 1 < DISTGEN_MAXTHREADS);
+	distgend_configT config;
+	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
+		config.number_of_threads = i + 1;
+		config.threads_to_use[i] = i;
+		std::cout << "Using " << i + 1 << " threads:" << std::endl;
+		std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
+		std::cout << std::endl;
+	}
+}
+
 static void execute_command_internal(std::string command, std::string cg_name) {
 	cgroup_add_me(cg_name);
 
