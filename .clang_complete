@@ -1,3 +1,4 @@
 -Ivendor/libponci/include
 -Ivendor/libdistgen/include
+-Ivendor/fast-lib/include
 -Iinclude
