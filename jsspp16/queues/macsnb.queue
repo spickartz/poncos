@@ -1,0 +1,6 @@
+heat -r 9000 -i 5000 -a 2 -t 8
+heat -r 9000 -i 5000 -a 9 -t 8
+heat -r 9000 -i 5000 -a 9 -t 8
+heat -r 9000 -i 5000 -a 2 -t 8
+heat -r 9000 -i 5000 -a 9 -t 8
+heat -r 9000 -i 5000 -a 9 -t 8

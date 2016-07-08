@@ -1,0 +1,3 @@
+bench/lama_starter.sh 8
+bench/mpiblast_starter.sh 8
+bench/lama_starter.sh 8
