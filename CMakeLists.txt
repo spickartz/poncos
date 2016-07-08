@@ -110,4 +110,10 @@ add_dependencies(pons_macsnb libdistgen libponci)
 target_link_libraries(pons_macsnb distgen ponci)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
 set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
+
+add_executable(classify_macsnb src/classify.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
+add_dependencies(classify_macsnb libdistgen libponci)
+target_link_libraries(classify_macsnb distgen ponci)
+set_property(TARGET classify_macsnb PROPERTY C_STANDARD 99)
+set_property(TARGET classify_macsnb PROPERTY CXX_STANDARD 14)
 ########

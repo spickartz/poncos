@@ -1,5 +1,5 @@
 /**
- * Simple scheduler for our mac-snb nodes.
+ * Simple scheduler.
  *
  * Copyright 2016 by LRR-TUM
  * Jens Breitbart     <j.breitbart@tum.de>
@@ -34,7 +34,7 @@ static size_t workers_active = 0;
 static std::mutex worker_counter_mutex;
 static std::condition_variable worker_counter_cv;
 
-static void command_done(const int config) {
+static void command_done(const size_t config) {
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 	--workers_active;
 	co_config_in_use[config] = false;
@@ -50,7 +50,8 @@ void execute_command_internal(std::string command, std::string cg_name, size_t c
 	command += "> ";
 	command += cg_name + ".log";
 
-	assert(system(command.c_str()) != -1);
+	auto temp = system(command.c_str());
+	assert(temp != -1);
 
 	// we are done
 	std::cout << ">> \t '" << command << "' completed at configuration " << config_used << std::endl;
@@ -101,7 +102,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 		}
 
 		using namespace std::literals::chrono_literals;
-		std::this_thread::sleep_for(5s);
+		std::this_thread::sleep_for(10s);
 
 		// TODO wait until cgroup frozen
 
@@ -118,9 +119,6 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 			std::cout << ">> \t Estimating total usage of "
 					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
 
-			// 0.4 + 0.4 => 1 laufen lassen
-			// 0.4 + 0.9 => beiden laufen lassen
-			// if (co_config_distgend[0] + co_config_distgend[1] < 0.9) {
 			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
 				std::cout << " -> we will run one" << std::endl;
 				// std::cout << "0: freezing new" << std::endl;
@@ -158,9 +156,8 @@ static void cleanup() {
 }
 
 int main(int argc, char const *argv[]) {
-
 	if (argc != 2) {
-		std::cout << "Usage: pons_macsnb <config file>" << std::endl;
+		std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
 		return 0;
 	}
 
