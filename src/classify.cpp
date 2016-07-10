@@ -8,6 +8,8 @@
  * Some rights reserved. See LICENSE
  */
 
+// TODO code must be updated to support multiple nodes. is currently not compiled
+
 #include "distgen/distgen.h"
 #include "ponci/ponci.hpp"
 #include "poncos/poncos.hpp"

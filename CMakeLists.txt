@@ -59,46 +59,9 @@ endif()
 ########
 
 ########
-# OpenMP
-find_package(OpenMP REQUIRED)
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-########
-
-########
 # Threads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-########
-
-########
-# libponci
-ExternalProject_Add(libponci
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
-    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
-    BUILD_IN_SOURCE 0
-    BUILD_COMMAND ${MAKE})
-
-# Store ponci variable in directory
-ExternalProject_Get_Property(libponci install_dir)
-set (libponci_path ${install_dir})
-include_directories(${libponci_path}/include)
-link_directories(${libponci_path}/lib)
-########
-
-########
-# libdistgen
-ExternalProject_Add(libdistgen
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libdistgen
-    CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libdistgen
-    BUILD_IN_SOURCE 0
-    BUILD_COMMAND ${MAKE})
-
-# Store distgend variable in directory
-ExternalProject_Get_Property(libdistgen install_dir)
-set (libdistgen_path ${install_dir})
-include_directories(${libdistgen_path}/include)
-link_directories(${libdistgen_path}/lib)
 ########
 
 ########
@@ -127,9 +90,9 @@ target_link_libraries(pons_macsnb fastlib)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
 set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
 
-add_executable(classify_macsnb src/classify.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
-add_dependencies(classify_macsnb libdistgen libponci)
-target_link_libraries(classify_macsnb distgen ponci)
-set_property(TARGET classify_macsnb PROPERTY C_STANDARD 99)
-set_property(TARGET classify_macsnb PROPERTY CXX_STANDARD 14)
+#add_executable(classify_macsnb src/classify.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
+#add_dependencies(classify_macsnb libdistgen libponci)
+#target_link_libraries(classify_macsnb distgen ponci)
+#set_property(TARGET classify_macsnb PROPERTY C_STANDARD 99)
+#set_property(TARGET classify_macsnb PROPERTY CXX_STANDARD 14)
 ########
