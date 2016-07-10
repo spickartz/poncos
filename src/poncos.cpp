@@ -26,24 +26,20 @@
 #include <fast-lib/message/agent/mmbwmon/stop.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
 
-// MQTT stuff
-const static std::string poncosID = "fast/poncos";
-const static std::string baseTopic = "fast/poncos";
+// COMMAND LINE PARAMETERS
 static std::string server;
 static size_t port = 1883;
-
 static std::string queue_filename;
 static std::string machine_filename;
 
 static std::vector<std::string> machines;
 
 // VARIABLES
-static size_t cgroups_counter = 0;
 static bool co_config_in_use[SLOTS] = {false, false};
 static std::string co_config_cgroup_name[SLOTS];
 static double co_config_distgend[SLOTS];
 
-static std::vector<std::thread> threads;
+static std::vector<std::thread> thread_pool;
 static size_t co_config_thread_index[SLOTS];
 
 static size_t workers_active = 0;
@@ -63,6 +59,7 @@ static void parse_options(size_t argc, const char **argv) {
 	if (argc == 1) {
 		print_help(argv[0]);
 	}
+
 	for (size_t i = 1; i < argc; ++i) {
 		std::string arg(argv[i]);
 
@@ -127,6 +124,8 @@ void execute_command_internal(std::string command, std::string cg_name, size_t c
 }
 
 static size_t execute_command(std::string command, const std::unique_lock<std::mutex> &work_counter_lock) {
+	static size_t cgroups_counter = 0;
+
 	assert(work_counter_lock.owns_lock());
 	++workers_active;
 
@@ -150,7 +149,7 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 		if (!co_config_in_use[i]) {
 			co_config_in_use[i] = true;
 			co_config_cgroup_name[i] = cg_name;
-			co_config_thread_index[i] = threads.size();
+			co_config_thread_index[i] = thread_pool.size();
 
 			replace += cg_name + " ";
 
@@ -173,7 +172,7 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 
 			std::cout << ">> \t starting '" << command << "' at configuration " << i << std::endl;
 
-			threads.emplace_back(execute_command_internal, command, cg_name, i);
+			thread_pool.emplace_back(execute_command_internal, command, cg_name, i);
 
 			return i;
 		}
@@ -289,7 +288,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 				work_counter_lock.unlock();
 
 				// std::cout << "0: wait for old" << std::endl;
-				threads[co_config_thread_index[old_config]].join();
+				thread_pool[co_config_thread_index[old_config]].join();
 
 				// std::cout << "0: thaw new" << std::endl;
 				thaw_remote_cgroup(comm, co_config_cgroup_name[new_config]);
@@ -308,10 +307,10 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 }
 
 static void cleanup() {
-	for (auto &t : threads) {
+	for (auto &t : thread_pool) {
 		if (t.joinable()) t.join();
 	}
-	threads.resize(0);
+	thread_pool.resize(0);
 
 	// No need to delete cgroups. Should be done automatically
 	// by our bash script.
@@ -333,8 +332,9 @@ int main(int argc, char const *argv[]) {
 	read_command_queue(machine_filename, machines);
 	std::cout << " done!" << std::endl;
 
-	fast::MQTT_communicator comm(poncosID, baseTopic, baseTopic, server, static_cast<int>(port), 60);
+	fast::MQTT_communicator comm("fast/poncos", "fast/poncos", "fast/poncos", server, static_cast<int>(port), 60);
 
+	// subscribe to the various topics
 	for (std::string mach : machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/response";
 		comm.add_subscription(topic);
