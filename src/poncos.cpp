@@ -50,8 +50,8 @@ static std::condition_variable worker_counter_cv;
 	std::cout << argv << " supports the following flags:\n";
 	std::cout << "\t --server \t URI of the MQTT broker. \t\t\t Required!\n";
 	std::cout << "\t --port \t Port of the MQTT broker. \t\t\t Default: 1883\n";
-	std::cout << "\t --queue \t\t Filename for the job queue.\n";
-	std::cout << "\t --machine \t\t Filename containing node names.\n";
+	std::cout << "\t --queue \t\t Filename for the job queue. \t\t\t Required!\n";
+	std::cout << "\t --machine \t\t Filename containing node names. \t\t\t Required!\n";
 	exit(0);
 }
 
@@ -123,6 +123,40 @@ void execute_command_internal(std::string command, std::string cg_name, size_t c
 	command_done(config_used);
 }
 
+// command input: mpirun -np X PONCOS command p0 p1
+// run instead  : mpirun -np X -hosts a,b cgroup_wrapper.sh 0,1,2,3,8,9,10,11 0,1 command p0 p1
+static std::string parse_command(std::string comm, std::string cg_name, sched_configT co_c) {
+	std::string replace = "-hosts ";
+	for (std::string mach : machines) {
+		replace += mach + ",";
+	}
+	// remove last ','
+	replace.pop_back();
+
+	replace += " ./cgroup_wrapper.sh ";
+
+	replace += cg_name + " ";
+
+	// cgroup CPUs and memory is set by the bash script
+	for (int i : co_c.cpus) {
+		replace += std::to_string(i) + ",";
+	}
+	// remove last ','
+	replace.pop_back();
+
+	replace += " ";
+
+	for (int i : co_c.mems) {
+		replace += std::to_string(i) + ",";
+	}
+	// remove last ','
+	replace.pop_back();
+
+	comm.replace(comm.find("PONCOS"), std::string("PONCOS").size(), replace);
+
+	return comm;
+}
+
 static size_t execute_command(std::string command, const std::unique_lock<std::mutex> &work_counter_lock) {
 	static size_t cgroups_counter = 0;
 
@@ -133,42 +167,13 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 	// cgroup is created by the bash script
 	++cgroups_counter;
 
-	// command input: mpirun -np X PONCOS command p0 p1
-	// run instead  : mpirun -np X -hosts a,b cgroup_wrapper.sh 0,1,2,3,8,9,10,11 0,1 command p0 p1
-
-	std::string replace = "-hosts ";
-	for (std::string mach : machines) {
-		replace += mach + ",";
-	}
-	// remove last ','
-	replace.pop_back();
-
-	replace += " ./cgroup_wrapper.sh ";
-
 	for (size_t i = 0; i < SLOTS; ++i) {
 		if (!co_config_in_use[i]) {
 			co_config_in_use[i] = true;
 			co_config_cgroup_name[i] = cg_name;
 			co_config_thread_index[i] = thread_pool.size();
 
-			replace += cg_name + " ";
-
-			// cgroup CPUs and memory is set by the bash script
-			for (int i : co_configs[i].cpus) {
-				replace += std::to_string(i) + ",";
-			}
-			// remove last ','
-			replace.pop_back();
-
-			replace += " ";
-
-			for (int i : co_configs[i].mems) {
-				replace += std::to_string(i) + ",";
-			}
-			// remove last ','
-			replace.pop_back();
-
-			command.replace(command.find("PONCOS"), std::string("PONCOS").size(), replace);
+			command = parse_command(command, cg_name, co_configs[i]);
 
 			std::cout << ">> \t starting '" << command << "' at configuration " << i << std::endl;
 

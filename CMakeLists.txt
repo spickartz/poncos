@@ -86,7 +86,7 @@ include_directories(include)
 # Compiling and linking
 add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
 add_dependencies(pons_macsnb libfast)
-target_link_libraries(pons_macsnb fastlib)
+target_link_libraries(pons_macsnb fastlib ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
 set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
 
