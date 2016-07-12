@@ -264,29 +264,30 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 		const size_t new_config = execute_command(command, work_counter_lock);
 		const size_t old_config = (new_config + 1) % SLOTS;
 
+		using namespace std::literals::chrono_literals;
+		std::this_thread::sleep_for(20s);
+
 		// check if two are running
 		if (co_config_in_use[0] && co_config_in_use[1]) {
 			// std::cout << "0: freezing old" << std::endl;
 			freeze_remote_cgroup(comm, co_config_cgroup_name[old_config]);
 		}
 
-		using namespace std::literals::chrono_literals;
-		std::this_thread::sleep_for(10s);
-
 		// measure distgen result
 		std::cout << ">> \t Running distgend at " << old_config << std::endl;
 		co_config_distgend[new_config] = run_distgen(comm, co_configs[old_config]);
 
-		std::cout << ">> \t Result " << co_config_distgend[new_config] << std::endl;
+		std::cout << ">> \t Result for command '" << command << "' is: " << 1 - co_config_distgend[new_config]
+				  << std::endl;
 
 		if (co_config_in_use[0] && co_config_in_use[1]) {
 			// std::cout << "0: thaw old" << std::endl;
 			thaw_remote_cgroup(comm, co_config_cgroup_name[old_config]);
 
-			std::cout << ">> \t Estimating total usage of " << co_config_distgend[0] + co_config_distgend[1];
+			std::cout << ">> \t Estimating total usage of "
+					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
 
-			// if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
-			if (co_config_distgend[0] + co_config_distgend[1] > 0.9) {
+			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
 				std::cout << " -> we will run one" << std::endl;
 				// std::cout << "0: freezing new" << std::endl;
 				freeze_remote_cgroup(comm, co_config_cgroup_name[new_config]);
@@ -328,14 +329,28 @@ int main(int argc, char const *argv[]) {
 	std::cout << "Reading command queue " << queue_filename << " ...";
 	std::cout.flush();
 	std::vector<std::string> command_queue;
-	read_command_queue(queue_filename, command_queue);
+	read_file(queue_filename, command_queue);
 	std::cout << " done!" << std::endl;
 
 	// fill the machine file
-	std::cout << "Reading command queue " << machine_filename << " ...";
+	std::cout << "Reading machine file " << machine_filename << " ...";
 	std::cout.flush();
-	read_command_queue(machine_filename, machines);
+	read_file(machine_filename, machines);
 	std::cout << " done!" << std::endl;
+
+	std::cout << "Command queue:\n";
+	std::cout << "==============\n";
+	for (std::string c : command_queue) {
+		std::cout << c << "\n";
+	}
+	std::cout << "==============\n";
+
+	std::cout << "Machine file:\n";
+	std::cout << "==============\n";
+	for (std::string c : machines) {
+		std::cout << c << "\n";
+	}
+	std::cout << "==============\n";
 
 	fast::MQTT_communicator comm("fast/poncos", "fast/poncos", "fast/poncos", server, static_cast<int>(port), 60);
 
