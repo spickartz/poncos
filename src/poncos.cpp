@@ -32,19 +32,30 @@ static size_t port = 1883;
 static std::string queue_filename;
 static std::string machine_filename;
 
-static std::vector<std::string> machines;
-
-// VARIABLES
+// marker if a slot is in use
 static bool co_config_in_use[SLOTS] = {false, false};
+
+// cgroup name running in a specific slot
 static std::string co_config_cgroup_name[SLOTS];
+
+// distgen results of a slot
 static double co_config_distgend[SLOTS];
 
+// threads used to run the applications
 static std::vector<std::thread> thread_pool;
+
+// index in the thread pool of the thread executing the cgroup in SLOT
 static size_t co_config_thread_index[SLOTS];
 
+// numbers of active workser
 static size_t workers_active = 0;
+
+// lock/cond variable used to wait for a job to be completed
 static std::mutex worker_counter_mutex;
 static std::condition_variable worker_counter_cv;
+
+// a list of all machines
+static std::vector<std::string> machines;
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
@@ -101,6 +112,7 @@ static void parse_options(size_t argc, const char **argv) {
 	if (queue_filename == "" || machine_filename == "") print_help(argv[0]);
 }
 
+// called after a command was completed
 static void command_done(const size_t config) {
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 	--workers_active;
@@ -109,6 +121,7 @@ static void command_done(const size_t config) {
 	worker_counter_cv.notify_one();
 }
 
+// executed by a new thread, calls system to start the application
 void execute_command_internal(std::string command, std::string cg_name, size_t config_used) {
 	command += " 2>&1 ";
 	// command += "| tee ";
@@ -167,6 +180,7 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 	// cgroup is created by the bash script
 	++cgroups_counter;
 
+	// search for a free slot and assign it to a new job
 	for (size_t i = 0; i < SLOTS; ++i) {
 		if (!co_config_in_use[i]) {
 			co_config_in_use[i] = true;
@@ -186,6 +200,7 @@ static size_t execute_command(std::string command, const std::unique_lock<std::m
 	assert(false);
 }
 
+// freezes all cgroups with the name @param cgroup_name
 static void freeze_remote_cgroup(fast::MQTT_communicator &comm, std::string cgroup_name) {
 	const fast::msg::agent::mmbwmon::stop m(cgroup_name);
 	for (std::string mach : machines) {
@@ -202,6 +217,7 @@ static void freeze_remote_cgroup(fast::MQTT_communicator &comm, std::string cgro
 	}
 }
 
+// thaws all cgroups with the name @param cgroup_name
 static void thaw_remote_cgroup(fast::MQTT_communicator &comm, std::string cgroup_name) {
 	const fast::msg::agent::mmbwmon::restart m(cgroup_name);
 	for (std::string mach : machines) {
@@ -256,14 +272,18 @@ static double run_distgen(fast::MQTT_communicator &comm, sched_configT conf) {
 }
 
 static void coschedule_queue(const std::vector<std::string> &command_queue, fast::MQTT_communicator &comm) {
+	// for all commands
 	for (auto command : command_queue) {
 		// wait until workers_active < SLOTS
 		std::unique_lock<std::mutex> work_counter_lock(worker_counter_mutex);
 		worker_counter_cv.wait(work_counter_lock, [] { return workers_active < SLOTS; });
 
+		// start the new job
 		const size_t new_config = execute_command(command, work_counter_lock);
+		// old config is used to run distgen
 		const size_t old_config = (new_config + 1) % SLOTS;
 
+		// for the initialization phase of the application to be completed
 		using namespace std::literals::chrono_literals;
 		std::this_thread::sleep_for(20s);
 
