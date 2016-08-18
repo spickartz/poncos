@@ -14,18 +14,11 @@ require:
 
 ## Setup
 To use poncos you must:
-1. first install [mmbwmon](https://github.com/lrr-tum/mmbwmon) on all nodes
-   you plan to use for scheduling.
-2. start mmbwmon on all nodes while they are idle. Wait until the initialization
-   phase of mmbwmon is completed.
-3. if you are not using a SandyBridge EP system, adjust the file
-   system_config/sandybridge_EP.cpp to match your system (or create a new one
-   and add a new build target to CMake).
+
+1. first install [mmbwmon](https://github.com/lrr-tum/mmbwmon) on all nodes you plan to use for scheduling.
+2. start mmbwmon on all nodes while they are idle. Wait until the initialization phase of mmbwmon is completed.
+3. if you are not using a SandyBridge EP system, adjust the file system_config/sandybridge_EP.cpp to match your system (or create a new one and add a new build target to CMake).
 4. compile poncos as every other CMake based project.
-5. create a machine-file containing all hostnames of the nodes you want to use
-   for your applications. Use linebreaks to seperate the hostnames (i.e. one
-   hostname per line).
-6. create a queue file containing one application command line per line
-   (see examples).
-7. run the poncos binary with --help and read the options on how to pass the
-   machine-file and queue.
+5. create a machine-file containing all hostnames of the nodes you want to use for your applications. Use linebreaks to seperate the hostnames (i.e. one hostname per line).
+6. create a queue file containing one application command line per line (see examples).
+7. run the poncos binary with --help and read the options on how to pass the machine-file and queue.
