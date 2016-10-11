@@ -78,8 +78,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue) {
 
 		execute_command(command);
 
-		using namespace std::literals::chrono_literals;
-		std::this_thread::sleep_for(10s);
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 
 		// measure distgen result
 		std::cout << ">> \t Running distgend at " << 1 << std::endl;

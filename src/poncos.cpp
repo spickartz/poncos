@@ -284,8 +284,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 		const size_t old_config = (new_config + 1) % SLOTS;
 
 		// for the initialization phase of the application to be completed
-		using namespace std::literals::chrono_literals;
-		std::this_thread::sleep_for(20s);
+		std::this_thread::sleep_for(std::chrono::seconds(20));
 
 		// check if two are running
 		if (co_config_in_use[0] && co_config_in_use[1]) {
