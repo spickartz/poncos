@@ -25,7 +25,7 @@
 
 class cgroup_controller {
   public:
-	// entries in the vector are read as: (machine index in machinefiles, slot it)
+	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
 
   public:

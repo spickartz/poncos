@@ -104,6 +104,15 @@ void cgroup_controller::wait_for_completion_of(const size_t id) {
 
 size_t cgroup_controller::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(config.size() > 0);
+	// we currently only support the same slot for all configs
+	{
+		assert(config.size() > 0);
+		assert(config.size() == machines.size());
+		size_t compare = config[0].second;
+		for (size_t i = 1; i < config.size(); ++i) {
+			assert(compare == config[i].second);
+		}
+	}
 	assert(work_counter_lock.owns_lock());
 
 	++workers_active; // TODO should this be here?
@@ -141,16 +150,6 @@ void cgroup_controller::execute_command_internal(std::string command, std::strin
 }
 
 std::string cgroup_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
-	// we currently only support the same slot for all configs
-	{
-		assert(config.size() > 0);
-		assert(config.size() == machines.size());
-		size_t compare = config[0].second;
-		for (size_t i = 1; i < config.size(); ++i) {
-			assert(compare == config[i].second);
-		}
-	}
-
 	std::string host_list;
 	for (std::pair<size_t, size_t> p : config) {
 		host_list += machines[p.first] + ",";
