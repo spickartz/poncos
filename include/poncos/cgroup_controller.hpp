@@ -52,6 +52,8 @@ class cgroup_controller {
 								  std::function<void(size_t)> callback);
 	void command_done(const size_t config);
 
+	static std::string cgroup_name_from_id(size_t id);
+
   public:
 	// getter
 	const std::vector<std::string> &machines;

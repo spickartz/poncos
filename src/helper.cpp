@@ -35,9 +35,3 @@ void read_file(std::string filename, std::vector<std::string> &command_queue) {
 		if (command[0] != '#') command_queue.push_back(command);
 	}
 }
-
-std::string cgroup_name_from_id(size_t id) {
-	std::string cg_name("pons_");
-	cg_name += std::to_string(id);
-	return cg_name;
-}

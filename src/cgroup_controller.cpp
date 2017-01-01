@@ -182,3 +182,9 @@ std::string cgroup_controller::parse_command(std::string command, std::string cg
 
 	return command;
 }
+
+std::string cgroup_controller::cgroup_name_from_id(size_t id) {
+	std::string cg_name("pons_");
+	cg_name += std::to_string(id);
+	return cg_name;
+}

@@ -25,6 +25,5 @@ constexpr size_t SLOTS = 2;
 extern const sched_configT co_configs[SLOTS];
 
 void read_file(std::string filename, std::vector<std::string> &command_queue);
-std::string cgroup_name_from_id(size_t id);
 
 #endif /* end of include guard: pons_hpp */

@@ -154,7 +154,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 
 				cgroup_controller::execute_config config;
 
-				for (int j = 0; j < controller.machines.size(); ++j) {
+				for (size_t j = 0; j < controller.machines.size(); ++j) {
 					config.emplace_back(j, new_slot);
 				}
 
