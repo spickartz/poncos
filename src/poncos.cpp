@@ -8,8 +8,11 @@
  * Some rights reserved. See LICENSE
  */
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -30,6 +33,7 @@ static std::string server;
 static size_t port = 1883;
 static std::string queue_filename;
 static std::string machine_filename;
+static std::string slot_path;
 
 // marker if a slot is in use
 static bool co_config_in_use[SLOTS] = {false, false};
@@ -40,6 +44,9 @@ static double co_config_distgend[SLOTS];
 // id of the job currently running at SLOT
 static size_t co_config_id[SLOTS] = {42, 42};
 
+// true if VM support is enabled
+static bool use_vms = false;
+
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
 	std::cout << "\t --vm \t\t\t Enable the usage of VMs. \t\t\t Required!\n";
@@ -47,6 +54,7 @@ static size_t co_config_id[SLOTS] = {42, 42};
 	std::cout << "\t --port \t\t Port of the MQTT broker. \t\t\t Default: 1883\n";
 	std::cout << "\t --queue \t\t Filename for the job queue. \t\t\t Required!\n";
 	std::cout << "\t --machine \t\t Filename containing node names. \t\t Required!\n";
+	std::cout << "\t --slot-path \t\t VM only: Path to XML slot specifications. \t Required!\n";
 
 	exit(0);
 }
@@ -92,15 +100,23 @@ static void parse_options(size_t argc, const char **argv) {
 			++i;
 			continue;
 		}
+
+		if (arg == "--vm") {
+			use_vms = true;
+			continue;
+		}
+		if (arg == "--slot-path") {
+			if (i + 1 >= argc) {
+				print_help(argv[0]);
+			}
+			slot_path = std::string(argv[i + 1]);
+			++i;
+			continue;
+		}
 	}
 
 	if (queue_filename == "" || machine_filename == "") print_help(argv[0]);
-}
-
-// called after a command was completed
-void command_done(const size_t config) {
-	co_config_in_use[config] = false;
-	co_config_distgend[config] = 0;
+	if (use_vms && slot_path == "") print_help(argv[0]);
 }
 
 static double run_distgen(fast::MQTT_communicator &comm, size_t slot, const std::vector<std::string> &machines) {
@@ -142,8 +158,13 @@ static double run_distgen(fast::MQTT_communicator &comm, size_t slot, const std:
 	return ret;
 }
 
-static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm,
-							 cgroup_controller &controller) {
+// called after a command was completed
+void command_done(const size_t config) {
+	co_config_in_use[config] = false;
+	co_config_distgend[config] = 0;
+}
+
+static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
 		controller.wait_for_ressource();
@@ -157,7 +178,7 @@ static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicato
 
 				cgroup_controller::execute_config config;
 
-				for (size_t j = 0; j < controller.machines.size(); ++j) {
+				for (size_t j = 0; j < controller.machines().size(); ++j) {
 					config.emplace_back(j, new_slot);
 				}
 
@@ -184,7 +205,7 @@ static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicato
 
 		// measure distgen result
 		std::cout << ">> \t Running distgend at " << old_slot << std::endl;
-		co_config_distgend[new_slot] = run_distgen(comm, old_slot, controller.machines);
+		co_config_distgend[new_slot] = run_distgen(comm, old_slot, controller.machines());
 
 		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
 
@@ -233,16 +254,38 @@ int main(int argc, char const *argv[]) {
 	auto comm = std::make_shared<fast::MQTT_communicator>("fast/poncos", "fast/poncos", "fast/poncos", server,
 														  static_cast<int>(port), 60);
 
-	cgroup_controller controller(comm, machine_filename);
+	controllerT *controller;
+
+	if (use_vms)
+		controller = new vm_controller(comm, machine_filename, slot_path);
+	else
+		controller = new cgroup_controller(comm, machine_filename);
+
+	// start virtual clusters on all slots
+	clock_t begin = clock();
+	controller->init();
+	clock_t end = clock();
+	auto start_time = static_cast<long>(double(end - begin) / double(CLOCKS_PER_SEC / 1000));
 
 	// subscribe to the various topics
-	for (std::string mach : controller.machines) {
+	for (std::string mach : controller->machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/response";
 		comm->add_subscription(topic);
 	}
 
 	std::cout << "MQTT ready!\n\n";
 
-	const auto runtime = time_measure<>::execute(coschedule_queue, job_queue, *comm, controller);
+	auto runtime = time_measure<>::execute(coschedule_queue, job_queue, *comm, *controller);
 	std::cout << "total runtime: " << runtime << " ms" << std::endl;
+
+	begin = clock();
+	controller->dismantle();
+	end = clock();
+	auto stop_time = static_cast<long>(double(end - begin) / double(CLOCKS_PER_SEC / 1000));
+
+	const int maxwidth = static_cast<int>(std::to_string(std::max({start_time, runtime, stop_time})).length());
+	std::cout << "Start time: " << std::setw(maxwidth) << start_time << " ms" << std::endl;
+	std::cout << "Runtime   : " << std::setw(maxwidth) << runtime << " ms" << std::endl;
+	std::cout << "Stop time : " << std::setw(maxwidth) << stop_time << " ms" << std::endl;
+	std::cout << "Total time: " << std::setw(maxwidth) << start_time + runtime + stop_time << " ms" << std::endl;
 }

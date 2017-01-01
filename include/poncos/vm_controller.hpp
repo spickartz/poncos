@@ -1,15 +1,15 @@
 /**
  * Poor mans scheduler
  *
- * Copyright 2016 by Jens Breitbart
+ * Copyright 2017 by Jens Breitbart
  * Jens Breitbart     <jbreitbart@gmail.com>
  *
  * Licensed under GNU General Public License 2.0 or later.
  * Some rights reserved. See LICENSE
  */
 
-#ifndef poncos_cgroup_controller
-#define poncos_cgroup_controller
+#ifndef poncos_vm_controller
+#define poncos_vm_controller
 
 #include <condition_variable>
 #include <string>
@@ -24,21 +24,27 @@
 
 #include <fast-lib/mqtt_communicator.hpp>
 
-class cgroup_controller : public controllerT {
+class vm_controller : public controllerT {
   public:
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
 
+	struct vm_pool_elemT {
+		std::string name;
+		std::string mac_addr;
+	};
+
   public:
-	cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename);
-	~cgroup_controller();
+	vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
+				  const std::string &_slot_path);
+	~vm_controller();
 
 	void init();
 	void dismantle();
 
-	// freezes all cgroups with supplied id
+	// freezes all VMs with supplied id
 	void freeze(const size_t id);
-	// thaws all cgroups with the supplied id
+	// thaws all VMs with the supplied id
 	void thaw(const size_t id);
 
 	// wait until ressources are free
@@ -57,7 +63,10 @@ class cgroup_controller : public controllerT {
 								  std::function<void(size_t)> callback);
 	void command_done(const size_t config);
 
-	static std::string cgroup_name_from_id(size_t id);
+	template <typename T> void suspend_resume_virt_cluster(size_t slot);
+
+	void start_all_VMs();
+	void stop_all_VMs();
 
   public:
 	// getter
@@ -76,7 +85,13 @@ class cgroup_controller : public controllerT {
 	size_t workers_active;
 
 	// a counter that is increased with every new cgroup created
-	size_t cgroups_counter;
+	size_t cmd_counter;
+
+	// path to the xml slot files
+	std::string slot_path;
+
+	// list of all VMs
+	std::list<vm_pool_elemT> vm_pool;
 
 	// threads used to run the applications
 	std::vector<std::thread> thread_pool;
@@ -84,8 +99,16 @@ class cgroup_controller : public controllerT {
 	// maps ids to the thread_pool
 	std::unordered_map<size_t, size_t> id_to_pool;
 
+	// maps ids to the slots
+	std::unordered_map<size_t, size_t> id_to_slot;
+
+	// stores the VMs used in the two slots
+	// TODO was originalle an unordered map but the key was never used for a lookup
+	//      isn't first and second.name the same @spickartz?
+	std::vector<std::pair<std::string, vm_pool_elemT>> virt_cluster[SLOTS];
+
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;
 };
 
-#endif /* end of include guard: poncos_cgroup_controller */
+#endif /* end of include guard: poncos_vm_controller */

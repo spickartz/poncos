@@ -14,7 +14,7 @@
 
 cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm,
 									 const std::string &machine_filename)
-	: machines(_machines), work_counter_lock(worker_counter_mutex), workers_active(0), cgroups_counter(0), comm(_comm) {
+	: work_counter_lock(worker_counter_mutex), workers_active(0), cgroups_counter(0), comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -24,19 +24,22 @@ cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicat
 
 	std::cout << "Machine file:\n";
 	std::cout << "==============\n";
-	for (std::string c : machines) {
+	for (std::string c : machines()) {
 		std::cout << c << "\n";
 	}
 	std::cout << "==============\n";
 
 	// subscribe to the various topics
-	for (std::string mach : machines) {
+	for (std::string mach : machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/restart/ack";
 		comm->add_subscription(topic);
 		topic = "fast/agent/" + mach + "/mmbwmon/stop/ack";
 		comm->add_subscription(topic);
 	}
 }
+
+void cgroup_controller::init() {}
+void cgroup_controller::dismantle() {}
 
 cgroup_controller::~cgroup_controller() {
 	done();
@@ -54,13 +57,13 @@ void cgroup_controller::done() {
 
 void cgroup_controller::freeze(const size_t id) {
 	const fast::msg::agent::mmbwmon::stop m(cgroup_name_from_id(id));
-	for (std::string mach : machines) {
+	for (std::string mach : machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/stop";
 		// std::cout << "sending message \n topic: " << topic << "\n message:\n" << m.to_string() << std::endl;
 		comm->send_message(m.to_string(), topic);
 	}
 
-	for (std::string mach : machines) {
+	for (std::string mach : machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/stop/ack";
 		// std::cout << "waiting on topic: " << topic << " ... " << std::flush;
 		comm->get_message(topic);
@@ -70,13 +73,13 @@ void cgroup_controller::freeze(const size_t id) {
 
 void cgroup_controller::thaw(const size_t id) {
 	const fast::msg::agent::mmbwmon::restart m(cgroup_name_from_id(id));
-	for (std::string mach : machines) {
+	for (std::string mach : machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/restart";
 		// std::cout << "sending message \n topic: " << topic << "\n message:\n" << m.to_string() << std::endl;
 		comm->send_message(m.to_string(), topic);
 	}
 
-	for (std::string mach : machines) {
+	for (std::string mach : machines()) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/restart/ack";
 		// std::cout << "waiting on topic: " << topic << " ... " << std::flush;
 		comm->get_message(topic);
@@ -107,7 +110,7 @@ size_t cgroup_controller::execute(const jobT &job, const execute_config &config,
 	// we currently only support the same slot for all configs
 	{
 		assert(config.size() > 0);
-		assert(config.size() == machines.size());
+		assert(config.size() == machines().size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
 			assert(compare == config[i].second);
@@ -152,7 +155,7 @@ void cgroup_controller::execute_command_internal(std::string command, std::strin
 std::string cgroup_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
 	std::string host_list;
 	for (std::pair<size_t, size_t> p : config) {
-		host_list += machines[p.first] + ",";
+		host_list += machines()[p.first] + ",";
 	}
 	// remove last ','
 	host_list.pop_back();
