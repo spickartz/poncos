@@ -88,15 +88,9 @@ include_directories(include)
 
 ########
 # Compiling and linking
-add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
+add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/sandybridge_EP.cpp src/cgroup_controller.cpp)
 add_dependencies(pons_macsnb libfast)
 target_link_libraries(pons_macsnb fastlib ${CMAKE_THREAD_LIBS_INIT} rt)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)
 set_property(TARGET pons_macsnb PROPERTY CXX_STANDARD 14)
-
-#add_executable(classify_macsnb src/classify.cpp src/helper.cpp system_config/sandybridge_EP.cpp)
-#add_dependencies(classify_macsnb libdistgen libponci)
-#target_link_libraries(classify_macsnb distgen ponci)
-#set_property(TARGET classify_macsnb PROPERTY C_STANDARD 99)
-#set_property(TARGET classify_macsnb PROPERTY CXX_STANDARD 14)
 ########
