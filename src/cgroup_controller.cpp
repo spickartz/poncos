@@ -99,8 +99,7 @@ void cgroup_controller::wait_for_completion_of(const size_t id) {
 	thread_pool[i].join();
 }
 
-size_t cgroup_controller::execute(std::string command, const execute_config &config,
-								  std::function<void(size_t)> callback) {
+size_t cgroup_controller::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(config.size() > 0);
 	assert(work_counter_lock.owns_lock());
 
@@ -111,7 +110,7 @@ size_t cgroup_controller::execute(std::string command, const execute_config &con
 
 	id_to_pool.emplace(cgroups_counter, thread_pool.size());
 
-	command = parse_command(command, cg_name, config);
+	const std::string command = generate_command(job, cg_name, config);
 	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cg_name, config[0].second,
 							 callback);
 
@@ -140,7 +139,7 @@ void cgroup_controller::execute_command_internal(std::string command, std::strin
 
 // command input: mpirun -np X PONCOS command p0 p1
 // run instead  : mpirun -np X -hosts a,b cgroup_wrapper.sh 0,1,2,3,8,9,10,11 0,1 command p0 p1
-std::string cgroup_controller::parse_command(std::string command, std::string cg_name, const execute_config &config) {
+std::string cgroup_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
 	// we currently only support the same slot for all configs
 	{
 		assert(config.size() > 0);
@@ -151,36 +150,35 @@ std::string cgroup_controller::parse_command(std::string command, std::string cg
 		}
 	}
 
-	std::string replace = "-hosts ";
+	std::string host_list;
 	for (std::pair<size_t, size_t> p : config) {
-		replace += machines[p.first] + ",";
+		host_list += machines[p.first] + ",";
 	}
 	// remove last ','
-	replace.pop_back();
+	host_list.pop_back();
 
-	replace += " ./cgroup_wrapper.sh ";
+	std::string command = " ./cgroup_wrapper.sh ";
 
-	replace += cg_name + " ";
+	command += cg_name + " ";
 
 	// cgroup CPUs and memory is set by the bash script
 	for (int i : co_configs[config[0].second].cpus) {
-		replace += std::to_string(i) + ",";
+		command += std::to_string(i) + ",";
 	}
 	// remove last ','
-	replace.pop_back();
+	command.pop_back();
 
-	replace += " ";
+	command += " ";
 
 	for (int i : co_configs[config[0].second].mems) {
-		replace += std::to_string(i) + ",";
+		command += std::to_string(i) + ",";
 	}
 	// remove last ','
-	replace.pop_back();
+	command.pop_back();
 
-	auto pos = command.find("PONCOS");
-	if (pos != std::string::npos) command.replace(pos, std::string("PONCOS").size(), replace);
+	command += job.command;
 
-	return command;
+	return "mpiexec -np " + std::to_string(job.nprocs) + " -hosts " + host_list + command;
 }
 
 std::string cgroup_controller::cgroup_name_from_id(size_t id) {

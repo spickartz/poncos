@@ -8,8 +8,8 @@
  * Some rights reserved. See LICENSE
  */
 
-#ifndef pons_hpp
-#define pons_hpp
+#ifndef poncos_hpp
+#define poncos_hpp
 
 #include <cassert>
 #include <condition_variable>
@@ -26,4 +26,4 @@ extern const sched_configT co_configs[SLOTS];
 
 void read_file(std::string filename, std::vector<std::string> &command_queue);
 
-#endif /* end of include guard: pons_hpp */
+#endif /* end of include guard: poncos_hpp */

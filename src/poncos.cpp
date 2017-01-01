@@ -16,10 +16,11 @@
 #include <vector>
 
 #include "poncos/cgroup_controller.hpp"
+#include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
 #include "poncos/time_measure.hpp"
+#include "poncos/vm_controller.hpp"
 
-#include <fast-lib/message/agent/mmbwmon/ack.hpp>
 #include <fast-lib/message/agent/mmbwmon/reply.hpp>
 #include <fast-lib/message/agent/mmbwmon/request.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
@@ -41,10 +42,12 @@ static size_t co_config_id[SLOTS] = {42, 42};
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
-	std::cout << "\t --server \t URI of the MQTT broker. \t\t\t Required!\n";
-	std::cout << "\t --port \t Port of the MQTT broker. \t\t\t Default: 1883\n";
+	std::cout << "\t --vm \t\t\t Enable the usage of VMs. \t\t\t Required!\n";
+	std::cout << "\t --server \t\t URI of the MQTT broker. \t\t\t Required!\n";
+	std::cout << "\t --port \t\t Port of the MQTT broker. \t\t\t Default: 1883\n";
 	std::cout << "\t --queue \t\t Filename for the job queue. \t\t\t Required!\n";
-	std::cout << "\t --machine \t\t Filename containing node names. \t\t\t Required!\n";
+	std::cout << "\t --machine \t\t Filename containing node names. \t\t Required!\n";
+
 	exit(0);
 }
 
@@ -139,10 +142,10 @@ static double run_distgen(fast::MQTT_communicator &comm, size_t slot, const std:
 	return ret;
 }
 
-static void coschedule_queue(const std::vector<std::string> &command_queue, fast::MQTT_communicator &comm,
+static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm,
 							 cgroup_controller &controller) {
 	// for all commands
-	for (auto command : command_queue) {
+	for (auto job : job_queue.jobs) {
 		controller.wait_for_ressource();
 
 		// search for a free slot and assign it to a new job
@@ -158,9 +161,9 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 					config.emplace_back(j, new_slot);
 				}
 
-				co_config_id[new_slot] = controller.execute(command, config, command_done);
+				co_config_id[new_slot] = controller.execute(job, config, command_done);
 
-				std::cout << ">> \t starting '" << command << "' at configuration " << new_slot << std::endl;
+				std::cout << ">> \t starting '" << job << "' at configuration " << new_slot << std::endl;
 
 				break;
 			}
@@ -183,8 +186,7 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 		std::cout << ">> \t Running distgend at " << old_slot << std::endl;
 		co_config_distgend[new_slot] = run_distgen(comm, old_slot, controller.machines);
 
-		std::cout << ">> \t Result for command '" << command << "' is: " << 1 - co_config_distgend[new_slot]
-				  << std::endl;
+		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
 
 		if (co_config_in_use[0] && co_config_in_use[1]) {
 			// std::cout << "0: thaw old" << std::endl;
@@ -216,17 +218,15 @@ static void coschedule_queue(const std::vector<std::string> &command_queue, fast
 int main(int argc, char const *argv[]) {
 	parse_options(static_cast<size_t>(argc), argv);
 
-	// fill the command qeue
-	std::cout << "Reading command queue " << queue_filename << " ...";
+	std::cout << "Reading job queue " << queue_filename << " ...";
 	std::cout.flush();
-	std::vector<std::string> command_queue;
-	read_file(queue_filename, command_queue);
+	job_queueT job_queue = read_job_queue_from_file(queue_filename);
 	std::cout << " done!" << std::endl;
 
-	std::cout << "Command queue:\n";
+	std::cout << "Job queue:\n";
 	std::cout << "==============\n";
-	for (std::string c : command_queue) {
-		std::cout << c << "\n";
+	for (auto job : job_queue.jobs) {
+		std::cout << job << "\n";
 	}
 	std::cout << "==============\n";
 
@@ -243,6 +243,6 @@ int main(int argc, char const *argv[]) {
 
 	std::cout << "MQTT ready!\n\n";
 
-	const auto runtime = time_measure<>::execute(coschedule_queue, command_queue, *comm, controller);
+	const auto runtime = time_measure<>::execute(coschedule_queue, job_queue, *comm, controller);
 	std::cout << "total runtime: " << runtime << " ms" << std::endl;
 }
