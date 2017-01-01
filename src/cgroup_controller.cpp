@@ -93,7 +93,10 @@ void cgroup_controller::wait_for_ressource() {
 void cgroup_controller::wait_for_completion_of(const size_t id) {
 	work_counter_lock.unlock();
 
-	auto i = id_to_pool.find(id)->second;
+	auto t = id_to_pool.find(id);
+
+	assert(t != id_to_pool.end());
+	auto i = t->second;
 
 	// std::cout << "0: wait for old" << std::endl;
 	thread_pool[i].join();
