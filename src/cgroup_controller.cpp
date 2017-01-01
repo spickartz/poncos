@@ -137,8 +137,6 @@ void cgroup_controller::execute_command_internal(std::string command, std::strin
 	worker_counter_cv.notify_one();
 }
 
-// command input: mpirun -np X PONCOS command p0 p1
-// run instead  : mpirun -np X -hosts a,b cgroup_wrapper.sh 0,1,2,3,8,9,10,11 0,1 command p0 p1
 std::string cgroup_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
 	// we currently only support the same slot for all configs
 	{
