@@ -6,6 +6,8 @@
 
 #include "poncos/job.hpp"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wweak-vtables"
 struct controllerT {
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
@@ -25,5 +27,9 @@ struct controllerT {
 
 	virtual const std::vector<std::string> &machines() = 0;
 };
+
+inline controllerT::~controllerT() {}
+
+#pragma clang diagnostic pop
 
 #endif /* end of include guard: poncos_controller */

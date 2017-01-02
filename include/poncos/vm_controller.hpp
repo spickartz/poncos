@@ -29,6 +29,7 @@ class vm_controller : public controllerT {
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
 
+  private:
 	struct vm_pool_elemT {
 		std::string name;
 		std::string mac_addr;

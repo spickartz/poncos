@@ -3,11 +3,6 @@
 
 #include <fast-lib/serializable.hpp>
 
-struct vm_pool_elemT {
-	std::string name;
-	std::string mac_addr;
-};
-
 struct jobT : public fast::Serializable {
 	jobT() = default;
 	jobT(size_t nprocs, std::string command);

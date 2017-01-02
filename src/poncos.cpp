@@ -29,11 +29,11 @@
 #include <fast-lib/mqtt_communicator.hpp>
 
 // COMMAND LINE PARAMETERS
-static std::string server;
+static std::string &server = *new std::string();
 static size_t port = 1883;
-static std::string queue_filename;
-static std::string machine_filename;
-static std::string slot_path;
+static std::string &queue_filename = *new std::string();
+static std::string &machine_filename = *new std::string();
+static std::string &slot_path = *new std::string();
 
 // marker if a slot is in use
 static bool co_config_in_use[SLOTS] = {false, false};
@@ -129,7 +129,7 @@ static double run_distgen(fast::MQTT_communicator &comm, size_t slot, const std:
 
 		// TODO check if we can use the same type
 		m.cores.resize(conf.cpus.size());
-		for (int i = 0; i < conf.cpus.size(); ++i) {
+		for (size_t i = 0; i < conf.cpus.size(); ++i) {
 			m.cores[i] = static_cast<size_t>(conf.cpus[i]);
 		}
 
@@ -159,7 +159,7 @@ static double run_distgen(fast::MQTT_communicator &comm, size_t slot, const std:
 }
 
 // called after a command was completed
-void command_done(const size_t config) {
+static void command_done(const size_t config) {
 	co_config_in_use[config] = false;
 	co_config_distgend[config] = 0;
 }
