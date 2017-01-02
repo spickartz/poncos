@@ -35,6 +35,8 @@ static size_t port = 1883;
 static std::string queue_filename;
 static std::string machine_filename;
 static std::string slot_path;
+static std::chrono::seconds wait_time(20);
+static bool use_vms = false;
 
 // marker if a slot is in use
 static bool co_config_in_use[SLOTS] = {false, false};
@@ -44,11 +46,6 @@ static double co_config_distgend[SLOTS];
 
 // id of the job currently running at SLOT
 static size_t co_config_id[SLOTS] = {42, 42};
-
-// true if VM support is enabled
-static bool use_vms = false;
-
-static std::chrono::seconds wait_time(20);
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";

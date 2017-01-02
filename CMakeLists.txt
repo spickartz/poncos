@@ -34,8 +34,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     ADD_DEFINITIONS(-Wno-exit-time-destructors -Wno-global-constructors)
   endif()
 
-
-
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Using GCC
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
@@ -48,10 +46,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # Using Intel C++
-
-  # CXX_STANDARD feature not working with older cmake + Intel
-  ADD_DEFINITIONS(-std=c++11)
-
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
     ADD_DEFINITIONS(-g -fast)
   endif()
@@ -59,6 +53,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
     ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra)
   endif()
+
+  # CXX_STANDARD feature not working with older cmake + Intel
+  ADD_DEFINITIONS(-std=c++11)
 
 endif()
 ########
