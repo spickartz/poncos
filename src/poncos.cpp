@@ -176,7 +176,7 @@ static void command_done(const size_t config) {
 static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
-		controller.wait_for_ressource(controller.machines().size() / 2);
+		controller.wait_for_ressource(controller.total_available_slots / SLOTS);
 
 		// search for a free slot and assign it to a new job
 		size_t new_slot = 0;
@@ -186,7 +186,7 @@ static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicato
 
 				cgroup_controller::execute_config config;
 
-				for (size_t j = 0; j < controller.machines().size(); ++j) {
+				for (size_t j = 0; j < controller.machines.size(); ++j) {
 					config.emplace_back(j, new_slot);
 				}
 
@@ -213,7 +213,7 @@ static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicato
 
 		// measure distgen result
 		std::cout << ">> \t Running distgend at " << old_slot << std::endl;
-		co_config_distgend[new_slot] = run_distgen(comm, old_slot, controller.machines());
+		co_config_distgend[new_slot] = run_distgen(comm, old_slot, controller.machines);
 
 		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
 
@@ -323,7 +323,7 @@ int main(int argc, char const *argv[]) {
 	timers.tock("Start time");
 
 	// subscribe to the various topics
-	for (std::string mach : controller->machines()) {
+	for (std::string mach : controller->machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/response";
 		comm->add_subscription(topic);
 	}

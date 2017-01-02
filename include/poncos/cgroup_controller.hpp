@@ -11,12 +11,9 @@
 #ifndef poncos_cgroup_controller
 #define poncos_cgroup_controller
 
-#include <condition_variable>
+#include <memory>
 #include <string>
-#include <thread>
-#include <unordered_map>
 #include <utility>
-#include <vector>
 
 #include "poncos/controller.hpp"
 #include "poncos/job.hpp"
@@ -37,13 +34,6 @@ class cgroup_controller : public controllerT {
 	// thaws all cgroups with the supplied id
 	void thaw(const size_t id);
 
-	// wait until ressources are free
-	void wait_for_ressource(const size_t requested);
-	// waits until id has completed its run
-	void wait_for_completion_of(const size_t id);
-	// wait until all workers are finished
-	void done();
-
 	// executes a command
 	size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback);
 
@@ -55,34 +45,7 @@ class cgroup_controller : public controllerT {
 
 	static std::string cgroup_name_from_id(size_t id);
 
-  public:
-	// getter
-	const std::vector<std::string> &machines() { return _machines; }
-
   private:
-	// a list of all machines
-	std::vector<std::string> _machines;
-
-	// lock/cond variable used to wait for a job to be completed
-	std::mutex worker_counter_mutex;
-	std::condition_variable worker_counter_cv;
-	std::unique_lock<std::mutex> work_counter_lock;
-
-	// numbers of slots available / in use
-	size_t total_available_slots;
-	size_t free_slots;
-
-	// a counter that is increased with every new cgroup created
-	size_t cgroups_counter;
-
-	// threads used to run the applications
-	std::vector<std::thread> thread_pool;
-
-	// maps ids to the thread_pool
-	std::unordered_map<size_t, size_t> id_to_pool;
-
-	// reference to a mqtt communictor
-	std::shared_ptr<fast::MQTT_communicator> comm;
 };
 
 #endif /* end of include guard: poncos_cgroup_controller */

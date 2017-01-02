@@ -15,48 +15,19 @@
 
 vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
 							 const std::string &_slot_path)
-	: work_counter_lock(worker_counter_mutex), cmd_counter(0), slot_path(_slot_path), comm(_comm) {
-
-	// fill the machine file
-	std::cout << "Reading machine file " << machine_filename << " ...";
-	std::cout.flush();
-	read_file(machine_filename, _machines);
-	std::cout << " done!" << std::endl;
-
-	std::cout << "Machine file:\n";
-	std::cout << "==============\n";
-	for (std::string c : machines()) {
-		std::cout << c << "\n";
-	}
-	std::cout << "==============\n";
-
+	: controllerT(_comm, machine_filename), slot_path(_slot_path) {
 	// subscribe to the various topics
-	for (std::string mach : machines()) {
+	for (std::string mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		comm->add_subscription(topic);
 	}
-
-	total_available_slots = machines().size() * SLOTS;
-	free_slots = total_available_slots;
 }
 
-vm_controller::~vm_controller() {
-	done();
-	for (auto &t : thread_pool) {
-		if (t.joinable()) t.join();
-	}
-	thread_pool.resize(0);
-}
+vm_controller::~vm_controller() {}
 
 void vm_controller::init() { start_all_VMs(); }
 
 void vm_controller::dismantle() { stop_all_VMs(); }
-
-void vm_controller::done() {
-	// wait until all workers are finished
-	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
-	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots == total_available_slots; });
-}
 
 void vm_controller::freeze(const size_t id) {
 	auto t = id_to_slot.find(id);
@@ -74,29 +45,11 @@ void vm_controller::thaw(const size_t id) {
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(slot);
 }
 
-void vm_controller::wait_for_ressource(const size_t requested) {
-	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
-
-	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots < requested; });
-}
-
-void vm_controller::wait_for_completion_of(const size_t id) {
-	work_counter_lock.unlock();
-
-	auto t = id_to_pool.find(id);
-
-	assert(t != id_to_pool.end());
-	auto i = t->second;
-
-	// std::cout << "0: wait for old" << std::endl;
-	thread_pool[i].join();
-}
-
 size_t vm_controller::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(config.size() > 0);
 	// we currently only support the same slot for all configs
 	{
-		assert(config.size() == machines().size());
+		assert(config.size() == machines.size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
 			assert(compare == config[i].second);
@@ -217,7 +170,7 @@ template <typename T> void vm_controller::suspend_resume_virt_cluster(size_t slo
 }
 
 void vm_controller::start_all_VMs() {
-	for (auto mach : machines()) {
+	for (auto mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/task";
 
 		// create task container and add tasks per slot
@@ -238,7 +191,7 @@ void vm_controller::start_all_VMs() {
 	}
 
 	fast::msg::migfra::Result_container response;
-	for (auto mach : machines()) {
+	for (auto mach : machines) {
 		// wait for VMs to be started
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));

@@ -1,38 +1,67 @@
 #ifndef poncos_controller
 #define poncos_controller
 
+#include <condition_variable>
+#include <memory>
 #include <string>
+#include <thread>
+#include <unordered_map>
 #include <vector>
+
+#include <fast-lib/mqtt_communicator.hpp>
 
 #include "poncos/job.hpp"
 
-// disable the weak vtable warning as this is a pure virtual function, which has no implementation
-// so its vtable must be emitted in every compilation unit
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-
-struct controllerT {
+class controllerT {
+  public:
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
 
-	virtual ~controllerT() = 0;
+  public:
+	controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename);
+	virtual ~controllerT();
+
 	virtual void init() = 0;
 	virtual void dismantle() = 0;
 
 	virtual void freeze(const size_t id) = 0;
 	virtual void thaw(const size_t id) = 0;
 
-	virtual void wait_for_ressource(const size_t) = 0;
-	virtual void wait_for_completion_of(const size_t) = 0;
-	virtual void done() = 0;
+	virtual void wait_for_ressource(const size_t);
+	virtual void wait_for_completion_of(const size_t);
+	virtual void done();
 
 	virtual size_t execute(const jobT &, const execute_config &, std::function<void(size_t)>) = 0;
 
-	virtual const std::vector<std::string> &machines() = 0;
+	const std::vector<std::string> &machines;
+	const size_t &total_available_slots;
+
+  protected:
+	// numbers of slots free
+	size_t free_slots;
+
+	// a counter that is increased with every new cgroup created
+	size_t cmd_counter;
+
+	// lock/cond variable used to wait for a job to be completed
+	std::mutex worker_counter_mutex;
+	std::condition_variable worker_counter_cv;
+	std::unique_lock<std::mutex> work_counter_lock;
+
+	// threads used to run the applications
+	std::vector<std::thread> thread_pool;
+
+	// maps ids to the thread_pool
+	std::unordered_map<size_t, size_t> id_to_pool;
+
+	// reference to a mqtt communictor
+	std::shared_ptr<fast::MQTT_communicator> comm;
+
+  private:
+	// numbers of total slots available
+	size_t _total_available_slots;
+	// a list of all machines
+	std::vector<std::string> _machines;
 };
-
-inline controllerT::~controllerT() {}
-
-#pragma clang diagnostic pop
 
 #endif /* end of include guard: poncos_controller */
