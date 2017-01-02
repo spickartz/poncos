@@ -29,11 +29,11 @@
 #include <fast-lib/mqtt_communicator.hpp>
 
 // COMMAND LINE PARAMETERS
-static std::string &server = *new std::string();
+static std::string server;
 static size_t port = 1883;
-static std::string &queue_filename = *new std::string();
-static std::string &machine_filename = *new std::string();
-static std::string &slot_path = *new std::string();
+static std::string queue_filename;
+static std::string machine_filename;
+static std::string slot_path;
 
 // marker if a slot is in use
 static bool co_config_in_use[SLOTS] = {false, false};
