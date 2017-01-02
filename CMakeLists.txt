@@ -30,7 +30,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
     ADD_DEFINITIONS(-g3 -O0 -Weverything)
 
-    ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow -Wno-c++98-compat-pedantic)
+    ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow -Wno-c++98-compat-pedantic -Wno-padded -Wno-global-constructors)
   endif()
 
 
