@@ -156,7 +156,6 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 	slot_stream << slot_file.rdbuf();
 	std::string slot_xml = slot_stream.str();
 
-
 	// modify XML
 	// -- vm name
 	std::regex name_regex("(<name>)(.+)(</name>)");
@@ -170,7 +169,7 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 	uuid_generate(uuid);
 	char uuid_char_str[40];
 	uuid_unparse(uuid, uuid_char_str);
-	std::string uuid_str((const char *)uuid_char_str);
+	std::string uuid_str(static_cast<const char *>(uuid_char_str));
 	std::regex uuid_regex("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}");
 	slot_xml = std::regex_replace(slot_xml, uuid_regex, uuid_str);
 	// -- mac
@@ -183,7 +182,6 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 
 	return std::make_shared<fast::msg::migfra::Start>(slot_xml, pci_ids, true);
 }
-
 
 template <typename T> void vm_controller::suspend_resume_virt_cluster(size_t slot) {
 	// request freeze
@@ -253,12 +251,11 @@ void vm_controller::stop_all_VMs() {
 	std::unordered_map<std::string, std::vector<std::string>> cluster_layout;
 
 	// collect VMs per host
-	for (size_t slot=0; slot<SLOTS; ++slot) {
+	for (size_t slot = 0; slot < SLOTS; ++slot) {
 		// send stop request
 		for (auto cluster_node : virt_cluster[slot]) {
 			cluster_layout[cluster_node.first].push_back(cluster_node.second);
 		}
-
 	}
 
 	for (auto host_vms : cluster_layout) {
@@ -275,7 +272,7 @@ void vm_controller::stop_all_VMs() {
 
 	// wait for completion
 	fast::msg::migfra::Result_container response;
-	for (auto host_vms: cluster_layout) {
+	for (auto host_vms : cluster_layout) {
 		std::string topic = "fast/migfra/" + host_vms.first + "/result";
 		response.from_string(comm->get_message(topic));
 		for (auto result : response.results) {
@@ -284,7 +281,7 @@ void vm_controller::stop_all_VMs() {
 	}
 
 	// clear virt_cluster
-	for (size_t slot=0; slot<SLOTS; ++slot) {
+	for (size_t slot = 0; slot < SLOTS; ++slot) {
 		virt_cluster[slot].clear();
 	}
 }
