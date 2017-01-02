@@ -26,10 +26,6 @@
 
 class cgroup_controller : public controllerT {
   public:
-	// entries in the vector are read as: (machine index in machinefiles, #slot)
-	using execute_config = std::vector<std::pair<size_t, size_t>>;
-
-  public:
 	cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename);
 	~cgroup_controller();
 
@@ -42,7 +38,7 @@ class cgroup_controller : public controllerT {
 	void thaw(const size_t id);
 
 	// wait until ressources are free
-	void wait_for_ressource();
+	void wait_for_ressource(const size_t requested);
 	// waits until id has completed its run
 	void wait_for_completion_of(const size_t id);
 	// wait until all workers are finished
@@ -53,7 +49,7 @@ class cgroup_controller : public controllerT {
 
   private:
 	std::string generate_command(const jobT &command, std::string cg_name, const execute_config &config);
-	void execute_command_internal(std::string command, std::string cg_name, size_t config_used,
+	void execute_command_internal(std::string command, std::string cg_name, const execute_config config,
 								  std::function<void(size_t)> callback);
 	void command_done(const size_t config);
 
@@ -72,8 +68,9 @@ class cgroup_controller : public controllerT {
 	std::condition_variable worker_counter_cv;
 	std::unique_lock<std::mutex> work_counter_lock;
 
-	// numbers of active workser
-	size_t workers_active;
+	// numbers of slots available / in use
+	size_t total_available_slots;
+	size_t free_slots;
 
 	// a counter that is increased with every new cgroup created
 	size_t cgroups_counter;

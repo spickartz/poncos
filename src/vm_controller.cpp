@@ -15,7 +15,7 @@
 
 vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
 							 const std::string &_slot_path)
-	: work_counter_lock(worker_counter_mutex), workers_active(0), cmd_counter(0), slot_path(_slot_path), comm(_comm) {
+	: work_counter_lock(worker_counter_mutex), cmd_counter(0), slot_path(_slot_path), comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -35,6 +35,9 @@ vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_co
 		std::string topic = "fast/migfra/" + mach + "/result";
 		comm->add_subscription(topic);
 	}
+
+	total_available_slots = machines().size() * SLOTS;
+	free_slots = total_available_slots;
 }
 
 vm_controller::~vm_controller() {
@@ -52,7 +55,7 @@ void vm_controller::dismantle() { stop_all_VMs(); }
 void vm_controller::done() {
 	// wait until all workers are finished
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
-	worker_counter_cv.wait(work_counter_lock, [&] { return workers_active == 0; });
+	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots == total_available_slots; });
 }
 
 void vm_controller::freeze(const size_t id) {
@@ -71,10 +74,10 @@ void vm_controller::thaw(const size_t id) {
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(slot);
 }
 
-void vm_controller::wait_for_ressource() {
+void vm_controller::wait_for_ressource(const size_t requested) {
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 
-	worker_counter_cv.wait(work_counter_lock, [&] { return workers_active < SLOTS; });
+	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots < requested; });
 }
 
 void vm_controller::wait_for_completion_of(const size_t id) {
@@ -93,7 +96,6 @@ size_t vm_controller::execute(const jobT &job, const execute_config &config, std
 	assert(config.size() > 0);
 	// we currently only support the same slot for all configs
 	{
-		assert(config.size() > 0);
 		assert(config.size() == machines().size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
@@ -102,22 +104,22 @@ size_t vm_controller::execute(const jobT &job, const execute_config &config, std
 	}
 	assert(work_counter_lock.owns_lock());
 
-	++workers_active; // TODO should this be here?
+	free_slots -= config.size();
+	assert(free_slots >= 0);
 
 	id_to_pool.emplace(cmd_counter, thread_pool.size());
 	id_to_slot.emplace(cmd_counter, config[0].second);
 
 	std::string cmd_name = "cmd_" + std::to_string(cmd_counter);
 
-	const std::string command = generate_command(job, config);
-	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_name, config[0].second,
-							 callback);
+	const std::string command = generate_command(job, config[0].second);
+	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_name, config, callback);
 
 	return cmd_counter++;
 }
 
 // executed by a new thread, calls system to start the application
-void vm_controller::execute_command_internal(std::string command, std::string cg_name, size_t config_used,
+void vm_controller::execute_command_internal(std::string command, std::string cg_name, const execute_config config,
 											 std::function<void(size_t)> callback) {
 	command += " 2>&1 ";
 	// command += "| tee ";
@@ -128,17 +130,18 @@ void vm_controller::execute_command_internal(std::string command, std::string cg
 	assert(temp != -1);
 
 	// we are done
-	std::cout << ">> \t '" << command << "' completed at configuration " << config_used << std::endl;
+	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
-	--workers_active; //  TODO should that be here?
-	callback(config_used);
+	free_slots += config.size();
+	assert(free_slots <= total_available_slots);
+	callback(config[0].second);
 	worker_counter_cv.notify_one();
 }
 
-std::string vm_controller::generate_command(const jobT &job, const execute_config &config) {
+std::string vm_controller::generate_command(const jobT &job, const size_t slot) {
 	std::string host_list;
-	for (auto virt_cluster_node : virt_cluster[config[0].second]) {
+	for (auto virt_cluster_node : virt_cluster[slot]) {
 		host_list += virt_cluster_node.second + ",";
 	}
 	// remove last ','

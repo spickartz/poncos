@@ -176,7 +176,7 @@ static void command_done(const size_t config) {
 static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
-		controller.wait_for_ressource();
+		controller.wait_for_ressource(controller.machines().size() / 2);
 
 		// search for a free slot and assign it to a new job
 		size_t new_slot = 0;
@@ -348,8 +348,11 @@ int main(int argc, char const *argv[]) {
 	total_time_stream << std::fixed << total_time;
 	std::string total_time_str = total_time_stream.str();
 	const int maxwidth = static_cast<int>(total_time_str.length());
-	std::cout << "Start time: " << std::setw(maxwidth) << std::fixed << timers.emit()["Start time"].as<double>() << " s" << std::endl;
-	std::cout << "Runtime   : " << std::setw(maxwidth) << std::fixed << timers.emit()["Runtime"].as<double>() << " s" << std::endl;
-	std::cout << "Stop time : " << std::setw(maxwidth) << std::fixed << timers.emit()["Stop time"].as<double>() << " s" << std::endl;
+	std::cout << "Start time: " << std::setw(maxwidth) << std::fixed << timers.emit()["Start time"].as<double>() << " s"
+			  << std::endl;
+	std::cout << "Runtime   : " << std::setw(maxwidth) << std::fixed << timers.emit()["Runtime"].as<double>() << " s"
+			  << std::endl;
+	std::cout << "Stop time : " << std::setw(maxwidth) << std::fixed << timers.emit()["Stop time"].as<double>() << " s"
+			  << std::endl;
 	std::cout << "Total time: " << std::setw(maxwidth) << total_time_str << " s" << std::endl;
 }

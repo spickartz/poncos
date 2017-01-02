@@ -14,7 +14,7 @@
 
 cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm,
 									 const std::string &machine_filename)
-	: work_counter_lock(worker_counter_mutex), workers_active(0), cgroups_counter(0), comm(_comm) {
+	: work_counter_lock(worker_counter_mutex), cgroups_counter(0), comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -36,6 +36,9 @@ cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicat
 		topic = "fast/agent/" + mach + "/mmbwmon/stop/ack";
 		comm->add_subscription(topic);
 	}
+
+	total_available_slots = machines().size() * SLOTS;
+	free_slots = total_available_slots;
 }
 
 void cgroup_controller::init() {}
@@ -52,7 +55,7 @@ cgroup_controller::~cgroup_controller() {
 void cgroup_controller::done() {
 	// wait until all workers are finished
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
-	worker_counter_cv.wait(work_counter_lock, [&] { return workers_active == 0; });
+	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots == total_available_slots; });
 }
 
 void cgroup_controller::freeze(const size_t id) {
@@ -87,10 +90,10 @@ void cgroup_controller::thaw(const size_t id) {
 	}
 }
 
-void cgroup_controller::wait_for_ressource() {
+void cgroup_controller::wait_for_ressource(const size_t requested) {
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 
-	worker_counter_cv.wait(work_counter_lock, [&] { return workers_active < SLOTS; });
+	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots < requested; });
 }
 
 void cgroup_controller::wait_for_completion_of(const size_t id) {
@@ -109,7 +112,6 @@ size_t cgroup_controller::execute(const jobT &job, const execute_config &config,
 	assert(config.size() > 0);
 	// we currently only support the same slot for all configs
 	{
-		assert(config.size() > 0);
 		assert(config.size() == machines().size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
@@ -118,7 +120,8 @@ size_t cgroup_controller::execute(const jobT &job, const execute_config &config,
 	}
 	assert(work_counter_lock.owns_lock());
 
-	++workers_active; // TODO should this be here?
+	free_slots -= config.size();
+	assert(free_slots >= 0);
 
 	std::string cg_name = cgroup_name_from_id(cgroups_counter);
 	// cgroup is created by the bash script
@@ -126,14 +129,13 @@ size_t cgroup_controller::execute(const jobT &job, const execute_config &config,
 	id_to_pool.emplace(cgroups_counter, thread_pool.size());
 
 	const std::string command = generate_command(job, cg_name, config);
-	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cg_name, config[0].second,
-							 callback);
+	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cg_name, config, callback);
 
 	return cgroups_counter++;
 }
 
 // executed by a new thread, calls system to start the application
-void cgroup_controller::execute_command_internal(std::string command, std::string cg_name, size_t config_used,
+void cgroup_controller::execute_command_internal(std::string command, std::string cg_name, const execute_config config,
 												 std::function<void(size_t)> callback) {
 	command += " 2>&1 ";
 	// command += "| tee ";
@@ -144,11 +146,12 @@ void cgroup_controller::execute_command_internal(std::string command, std::strin
 	assert(temp != -1);
 
 	// we are done
-	std::cout << ">> \t '" << command << "' completed at configuration " << config_used << std::endl;
+	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
-	--workers_active; //  TODO should that be here?
-	callback(config_used);
+	free_slots += config.size();
+	assert(free_slots <= total_available_slots);
+	callback(config[0].second);
 	worker_counter_cv.notify_one();
 }
 

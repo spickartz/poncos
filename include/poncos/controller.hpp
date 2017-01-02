@@ -22,11 +22,11 @@ struct controllerT {
 	virtual void freeze(const size_t id) = 0;
 	virtual void thaw(const size_t id) = 0;
 
-	virtual void wait_for_ressource() = 0;
-	virtual void wait_for_completion_of(const size_t id) = 0;
+	virtual void wait_for_ressource(const size_t) = 0;
+	virtual void wait_for_completion_of(const size_t) = 0;
 	virtual void done() = 0;
 
-	virtual size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback) = 0;
+	virtual size_t execute(const jobT &, const execute_config &, std::function<void(size_t)>) = 0;
 
 	virtual const std::vector<std::string> &machines() = 0;
 };
