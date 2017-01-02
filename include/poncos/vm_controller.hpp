@@ -55,7 +55,7 @@ class vm_controller : public controllerT {
 	size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback);
 
   private:
-	std::string generate_command(const jobT &command, std::string cg_name, const execute_config &config);
+	std::string generate_command(const jobT &command, const execute_config &config);
 	void execute_command_internal(std::string command, std::string cg_name, size_t config_used,
 								  std::function<void(size_t)> callback);
 	void command_done(const size_t config);

@@ -113,7 +113,7 @@ size_t vm_controller::execute(const jobT &job, const execute_config &config, std
 
 	std::string cmd_name = "cmd_" + std::to_string(cmd_counter);
 
-	const std::string command = generate_command(job, cmd_name, config);
+	const std::string command = generate_command(job, config);
 	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_name, config[0].second,
 							 callback);
 
@@ -140,7 +140,7 @@ void vm_controller::execute_command_internal(std::string command, std::string cg
 	worker_counter_cv.notify_one();
 }
 
-std::string vm_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
+std::string vm_controller::generate_command(const jobT &job, const execute_config &config) {
 	std::string host_list;
 	for (auto virt_cluster_node : virt_cluster[config[0].second]) {
 		host_list += virt_cluster_node.second.name + ",";
@@ -214,7 +214,7 @@ void vm_controller::start_all_VMs() {
 			uuid_generate(uuid);
 			char uuid_char_str[40];
 			uuid_unparse(uuid, uuid_char_str);
-			std::string uuid_str((const char *)uuid_char_str);
+			std::string uuid_str(static_cast<const char *>(uuid_char_str));
 			std::regex uuid_regex("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}");
 			slot_xml = std::regex_replace(slot_xml, uuid_regex, uuid_str);
 			// -- mac
