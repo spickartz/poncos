@@ -56,6 +56,20 @@ void controllerT::wait_for_completion_of(const size_t id) {
 	thread_pool[i].join();
 }
 
+size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
+	assert(work_counter_lock.owns_lock());
+
+	assert(config.size() <= free_slots);
+	free_slots -= config.size();
+
+	id_to_pool.emplace(cmd_counter, thread_pool.size());
+
+	const std::string command = generate_command(job, cmd_counter, config);
+	thread_pool.emplace_back(&controllerT::execute_command_internal, this, command, cmd_counter, config, callback);
+
+	return cmd_counter++;
+}
+
 void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config config,
 										   std::function<void(size_t)> callback) {
 	const std::string cmd_name = cmd_name_from_id(counter);

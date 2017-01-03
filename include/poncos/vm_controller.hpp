@@ -39,11 +39,8 @@ class vm_controller : public controllerT {
 	// thaws all VMs with the supplied id
 	void thaw(const size_t id);
 
-	// executes a command
-	size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback);
-
   private:
-	std::string generate_command(const jobT &job, const size_t slot) const;
+	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 	std::shared_ptr<fast::msg::migfra::Start> generate_start_task(size_t slot, vm_pool_elemT &free_vm);
 	void command_done(const size_t config);
 

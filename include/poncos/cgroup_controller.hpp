@@ -34,9 +34,6 @@ class cgroup_controller : public controllerT {
 	// thaws all cgroups with the supplied id
 	void thaw(const size_t id);
 
-	// executes a command
-	size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback);
-
   private:
 	std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const;
 	void command_done(const size_t config);

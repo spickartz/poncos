@@ -61,31 +61,17 @@ void cgroup_controller::thaw(const size_t id) {
 	}
 }
 
-size_t cgroup_controller::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
-	assert(config.size() > 0);
+std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	// we currently only support the same slot for all configs
 	{
+		assert(config.size() > 0);
 		assert(config.size() == machines.size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
 			assert(compare == config[i].second);
 		}
 	}
-	assert(work_counter_lock.owns_lock());
 
-	assert(config.size() <= free_slots);
-	free_slots -= config.size();
-
-	id_to_pool.emplace(cmd_counter, thread_pool.size());
-
-	const std::string command = generate_command(job, cmd_counter, config);
-	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cmd_counter, config,
-							 callback);
-
-	return cmd_counter++;
-}
-
-std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	std::string host_list;
 	for (std::pair<size_t, size_t> p : config) {
 		host_list += machines[p.first] + ",";

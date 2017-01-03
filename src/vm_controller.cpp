@@ -45,33 +45,19 @@ void vm_controller::thaw(const size_t id) {
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(slot);
 }
 
-size_t vm_controller::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
-	assert(config.size() > 0);
+std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/, const execute_config &config) const {
 	// we currently only support the same slot for all configs
 	{
+		assert(config.size() > 0);
 		assert(config.size() == machines.size());
 		size_t compare = config[0].second;
 		for (size_t i = 1; i < config.size(); ++i) {
 			assert(compare == config[i].second);
 		}
 	}
-	assert(work_counter_lock.owns_lock());
 
-	assert(config.size() <= free_slots);
-	free_slots -= config.size();
-
-	id_to_pool.emplace(cmd_counter, thread_pool.size());
-	id_to_slot.emplace(cmd_counter, config[0].second);
-
-	const std::string command = generate_command(job, config[0].second);
-	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_counter, config, callback);
-
-	return cmd_counter++;
-}
-
-std::string vm_controller::generate_command(const jobT &job, const size_t slot) const {
 	std::string host_list;
-	for (auto virt_cluster_node : virt_cluster[slot]) {
+	for (auto virt_cluster_node : virt_cluster[config[0].second]) {
 		host_list += virt_cluster_node.second + ",";
 	}
 	// remove last ','
