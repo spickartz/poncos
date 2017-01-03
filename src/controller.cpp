@@ -6,8 +6,8 @@
 #include "poncos/poncos.hpp"
 
 controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename)
-	: machines(_machines), total_available_slots(_total_available_slots), cmd_counter(0),
-	  work_counter_lock(worker_counter_mutex), comm(_comm) {
+	: machines(_machines), available_slots(_available_slots), cmd_counter(0), work_counter_lock(worker_counter_mutex),
+	  comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -25,8 +25,7 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 	machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
 																 std::numeric_limits<size_t>::max()}});
 
-	_total_available_slots = machines.size() * SLOTS;
-	free_slots = total_available_slots; // TODO split in two. one per slot
+	_available_slots = machines.size();
 }
 
 controllerT::~controllerT() {
@@ -40,13 +39,34 @@ controllerT::~controllerT() {
 void controllerT::done() {
 	// wait until all workers are finished
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
-	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots == total_available_slots; });
+	worker_counter_cv.wait(work_counter_lock, [&] {
+		for (size_t i = 0; i < machine_usage.size(); ++i) {
+			for (size_t s = 0; s < SLOTS; ++s) {
+				if (machine_usage[i][s] != std::numeric_limits<size_t>::max()) return false;
+			}
+		}
+
+		return true;
+	});
 }
 
 void controllerT::wait_for_ressource(const size_t requested) {
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 
-	worker_counter_cv.wait(work_counter_lock, [&] { return free_slots >= requested; });
+	worker_counter_cv.wait(work_counter_lock, [&] {
+		size_t counter = 0;
+
+		for (size_t i = 0; i < machine_usage.size(); ++i) {
+			for (size_t s = 0; s < SLOTS; ++s) {
+				if (machine_usage[i][s] == std::numeric_limits<size_t>::max()) {
+					++counter;
+					break;
+				}
+			}
+		}
+
+		return counter >= requested;
+	});
 }
 
 void controllerT::wait_for_completion_of(const size_t id) {
@@ -74,9 +94,6 @@ controllerT::execute_config controllerT::generate_opposing_config(const size_t i
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(work_counter_lock.owns_lock());
 	assert(config.size() > 0);
-
-	assert(config.size() <= free_slots);
-	free_slots -= config.size();
 
 	id_to_tpool.push_back(thread_pool.size());
 	id_to_config.push_back(config);
@@ -113,8 +130,6 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 		machine_usage[config[i].first][config[i].second] = std::numeric_limits<size_t>::max();
 	}
 
-	free_slots += config.size();
-	assert(free_slots <= total_available_slots);
 	callback(config[0].second);
 	worker_counter_cv.notify_one();
 }

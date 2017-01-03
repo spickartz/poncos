@@ -76,7 +76,9 @@ void cgroup_controller::send_message(const controllerT::execute_config &config, 
 
 std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	std::string host_lists[SLOTS];
-	size_t hosts_per_slot[SLOTS] = {0, 0};
+	size_t hosts_per_slot[SLOTS];
+	for (size_t s = 0; s < SLOTS; ++s) hosts_per_slot[s] = 0;
+
 	for (std::pair<size_t, size_t> p : config) {
 		host_lists[p.second] += machines[p.first] + ",";
 		++hosts_per_slot[p.second];

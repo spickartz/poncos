@@ -41,7 +41,7 @@ class controllerT {
 
 	// getters
 	const std::vector<std::string> &machines;
-	const size_t &total_available_slots;
+	const size_t &available_slots;
 
   protected:
 	// executed by a new thread, calls system to start the application
@@ -51,9 +51,6 @@ class controllerT {
 	std::string cmd_name_from_id(const size_t id) const;
 
   protected:
-	// numbers of slots free
-	size_t free_slots;
-
 	// a counter that is increased with every new cgroup created
 	size_t cmd_counter;
 
@@ -80,7 +77,7 @@ class controllerT {
 
   private:
 	// numbers of total slots available
-	size_t _total_available_slots;
+	size_t _available_slots;
 	// a list of all machines
 	std::vector<std::string> _machines;
 };
