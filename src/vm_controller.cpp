@@ -30,38 +30,35 @@ void vm_controller::init() { start_all_VMs(); }
 void vm_controller::dismantle() { stop_all_VMs(); }
 
 void vm_controller::freeze(const size_t id) {
-	assert(id < id_to_slot.size());
+	assert(id < id_to_config.size());
 
-	size_t slot = id_to_slot[id];
-	suspend_resume_virt_cluster<fast::msg::migfra::Suspend>(slot);
+	const execute_config &config = id_to_config[id];
+	suspend_resume_virt_cluster<fast::msg::migfra::Suspend>(config);
 }
 
 void vm_controller::thaw(const size_t id) {
-	assert(id < id_to_slot.size());
+	assert(id < id_to_config.size());
 
-	size_t slot = id_to_slot[id];
-	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(slot);
+	const execute_config &config = id_to_config[id];
+	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(config);
 }
 
 std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/, const execute_config &config) const {
-	// we currently only support the same slot for all configs
-	{
-		assert(config.size() > 0);
-		assert(config.size() == machines.size());
-		size_t compare = config[0].second;
-		for (size_t i = 1; i < config.size(); ++i) {
-			assert(compare == config[i].second);
-		}
-	}
-
 	std::string host_list;
-	for (auto virt_cluster_node : virt_cluster[config[0].second]) {
-		host_list += virt_cluster_node.second + ",";
+	for (const auto &vm : config) {
+		host_list += get_hostname_from_machinename(vm);
 	}
 	// remove last ','
 	host_list.pop_back();
 
 	return "mpiexec -np " + std::to_string(job.nprocs) + " -hosts " + host_list + " " + job.command;
+}
+
+std::string vm_controller::get_hostname_from_machinename(const std::pair<size_t, size_t> &config) const {
+	// TODO @spickartz? :)
+	// config->first ist der index in machines
+	// config->second ist der slot (also 0 oder 1)
+	return "";
 }
 
 // generates start task for a single VM
@@ -100,8 +97,14 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 	return std::make_shared<fast::msg::migfra::Start>(slot_xml, pci_ids, true);
 }
 
-template <typename T> void vm_controller::suspend_resume_virt_cluster(size_t slot) {
-	// request freeze
+template <typename T> void vm_controller::suspend_resume_virt_cluster(const execute_config &config) {
+
+	size_t slot = config[0].second;
+	// TODO @spickartz? :)
+	// Change the code below to suspend/resume all VMs in the config?
+	// The slot variable above is just to sure it still compiles :)
+
+	// request OP
 	for (auto cluster_elem : virt_cluster[slot]) {
 		std::string topic = "fast/migfra/" + cluster_elem.first + "/task";
 

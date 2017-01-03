@@ -43,10 +43,12 @@ class vm_controller : public controllerT {
 	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 	std::shared_ptr<fast::msg::migfra::Start> generate_start_task(size_t slot, vm_pool_elemT &free_vm);
 
-	template <typename T> void suspend_resume_virt_cluster(size_t slot);
+	template <typename T> void suspend_resume_virt_cluster(const execute_config &config);
 
 	void start_all_VMs();
 	void stop_all_VMs();
+
+	std::string get_hostname_from_machinename(const std::pair<size_t, size_t> &config) const;
 
   private:
 	// path to the xml slot files

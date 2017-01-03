@@ -1,6 +1,7 @@
 #ifndef poncos_controller
 #define poncos_controller
 
+#include <array>
 #include <condition_variable>
 #include <memory>
 #include <string>
@@ -60,8 +61,12 @@ class controllerT {
 
 	// maps ids to the thread_pool
 	std::vector<size_t> id_to_tpool;
-	// maps ids to the slots
-	std::vector<size_t> id_to_slot;
+	// maps ids to the execution configuration
+	std::vector<execute_config> id_to_config; // TODO: do we need the complete config?
+
+	// stores the current usage of the machines
+	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
+	std::vector<std::array<size_t, 2>> machine_usage;
 
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;

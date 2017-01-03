@@ -1,6 +1,7 @@
 #include "poncos/controller.hpp"
 
 #include <iostream>
+#include <limits>
 
 #include "poncos/poncos.hpp"
 
@@ -20,6 +21,9 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 		std::cout << c << "\n";
 	}
 	std::cout << "==============\n";
+
+	std::fill_n(machine_usage.begin(), machines.size(),
+				std::array<size_t, 2>{{std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()}});
 
 	_total_available_slots = machines.size() * SLOTS;
 	free_slots = total_available_slots; // TODO split in two. one per slot
@@ -60,7 +64,11 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	free_slots -= config.size();
 
 	id_to_tpool.push_back(thread_pool.size());
-	id_to_slot.push_back(config[0].second);
+	id_to_config.push_back(config);
+	for (size_t i = 0; i < config.size(); ++i) {
+		assert(machine_usage[config[i].first][config[i].second] == std::numeric_limits<size_t>::max());
+		machine_usage[config[i].first][config[i].second] = cmd_counter;
+	}
 
 	const std::string command = generate_command(job, cmd_counter, config);
 	thread_pool.emplace_back(&controllerT::execute_command_internal, this, command, cmd_counter, config, callback);
@@ -84,6 +92,12 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
+
+	for (size_t i = 0; i < config.size(); ++i) {
+		assert(machine_usage[config[i].first][config[i].second] != std::numeric_limits<size_t>::max());
+		machine_usage[config[i].first][config[i].second] = std::numeric_limits<size_t>::max();
+	}
+
 	free_slots += config.size();
 	assert(free_slots <= total_available_slots);
 	callback(config[0].second);
