@@ -1,9 +1,9 @@
 #include "poncos/cgroup_controller.hpp"
 
-#include <algorithm>
 #include <cassert>
 #include <condition_variable>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <thread>
 

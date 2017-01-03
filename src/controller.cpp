@@ -54,6 +54,7 @@ void controllerT::wait_for_ressource(const size_t requested) {
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 
 	worker_counter_cv.wait(work_counter_lock, [&] {
+		// TODO maybe we should not do this lazy but keep it updated all the time
 		size_t counter = 0;
 
 		for (size_t i = 0; i < machine_usage.size(); ++i) {
