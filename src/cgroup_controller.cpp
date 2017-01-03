@@ -30,7 +30,7 @@ void cgroup_controller::dismantle() {}
 cgroup_controller::~cgroup_controller() {}
 
 void cgroup_controller::freeze(const size_t id) {
-	const fast::msg::agent::mmbwmon::stop m(cgroup_name_from_id(id));
+	const fast::msg::agent::mmbwmon::stop m(cmd_name_from_id(id));
 	for (std::string mach : machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/stop";
 		// std::cout << "sending message \n topic: " << topic << "\n message:\n" << m.to_string() << std::endl;
@@ -46,7 +46,7 @@ void cgroup_controller::freeze(const size_t id) {
 }
 
 void cgroup_controller::thaw(const size_t id) {
-	const fast::msg::agent::mmbwmon::restart m(cgroup_name_from_id(id));
+	const fast::msg::agent::mmbwmon::restart m(cmd_name_from_id(id));
 	for (std::string mach : machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/restart";
 		// std::cout << "sending message \n topic: " << topic << "\n message:\n" << m.to_string() << std::endl;
@@ -76,39 +76,16 @@ size_t cgroup_controller::execute(const jobT &job, const execute_config &config,
 	assert(config.size() <= free_slots);
 	free_slots -= config.size();
 
-	std::string cg_name = cgroup_name_from_id(cmd_counter);
-	// cgroup is created by the bash script
-
 	id_to_pool.emplace(cmd_counter, thread_pool.size());
 
-	const std::string command = generate_command(job, cg_name, config);
-	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cg_name, config, callback);
+	const std::string command = generate_command(job, cmd_counter, config);
+	thread_pool.emplace_back(&cgroup_controller::execute_command_internal, this, command, cmd_counter, config,
+							 callback);
 
 	return cmd_counter++;
 }
 
-// executed by a new thread, calls system to start the application
-void cgroup_controller::execute_command_internal(std::string command, std::string cg_name, const execute_config config,
-												 std::function<void(size_t)> callback) {
-	command += " 2>&1 ";
-	// command += "| tee ";
-	command += "> ";
-	command += cg_name + ".log";
-
-	auto temp = system(command.c_str());
-	assert(temp != -1);
-
-	// we are done
-	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
-
-	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
-	free_slots += config.size();
-	assert(free_slots <= total_available_slots);
-	callback(config[0].second);
-	worker_counter_cv.notify_one();
-}
-
-std::string cgroup_controller::generate_command(const jobT &job, std::string cg_name, const execute_config &config) {
+std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	std::string host_list;
 	for (std::pair<size_t, size_t> p : config) {
 		host_list += machines[p.first] + ",";
@@ -118,7 +95,7 @@ std::string cgroup_controller::generate_command(const jobT &job, std::string cg_
 
 	std::string command = " ./cgroup_wrapper.sh ";
 
-	command += cg_name + " ";
+	command += cmd_name_from_id(counter) + " ";
 
 	// cgroup CPUs and memory is set by the bash script
 	for (int i : co_configs[config[0].second].cpus) {
@@ -138,10 +115,4 @@ std::string cgroup_controller::generate_command(const jobT &job, std::string cg_
 	command += job.command;
 
 	return "mpiexec -np " + std::to_string(job.nprocs) + " -hosts " + host_list + command;
-}
-
-std::string cgroup_controller::cgroup_name_from_id(size_t id) {
-	std::string cg_name("pons_");
-	cg_name += std::to_string(id);
-	return cg_name;
 }

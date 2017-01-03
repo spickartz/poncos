@@ -63,36 +63,13 @@ size_t vm_controller::execute(const jobT &job, const execute_config &config, std
 	id_to_pool.emplace(cmd_counter, thread_pool.size());
 	id_to_slot.emplace(cmd_counter, config[0].second);
 
-	std::string cmd_name = "cmd_" + std::to_string(cmd_counter);
-
 	const std::string command = generate_command(job, config[0].second);
-	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_name, config, callback);
+	thread_pool.emplace_back(&vm_controller::execute_command_internal, this, command, cmd_counter, config, callback);
 
 	return cmd_counter++;
 }
 
-// executed by a new thread, calls system to start the application
-void vm_controller::execute_command_internal(std::string command, std::string cg_name, const execute_config config,
-											 std::function<void(size_t)> callback) {
-	command += " 2>&1 ";
-	// command += "| tee ";
-	command += "> ";
-	command += cg_name + ".log";
-
-	auto temp = system(command.c_str());
-	assert(temp != -1);
-
-	// we are done
-	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
-
-	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
-	free_slots += config.size();
-	assert(free_slots <= total_available_slots);
-	callback(config[0].second);
-	worker_counter_cv.notify_one();
-}
-
-std::string vm_controller::generate_command(const jobT &job, const size_t slot) {
+std::string vm_controller::generate_command(const jobT &job, const size_t slot) const {
 	std::string host_list;
 	for (auto virt_cluster_node : virt_cluster[slot]) {
 		host_list += virt_cluster_node.second + ",";

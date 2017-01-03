@@ -43,10 +43,8 @@ class vm_controller : public controllerT {
 	size_t execute(const jobT &command, const execute_config &config, std::function<void(size_t)> callback);
 
   private:
-	std::string generate_command(const jobT &job, const size_t slot);
+	std::string generate_command(const jobT &job, const size_t slot) const;
 	std::shared_ptr<fast::msg::migfra::Start> generate_start_task(size_t slot, vm_pool_elemT &free_vm);
-	void execute_command_internal(std::string command, std::string cg_name, const execute_config config,
-								  std::function<void(size_t)> callback);
 	void command_done(const size_t config);
 
 	template <typename T> void suspend_resume_virt_cluster(size_t slot);

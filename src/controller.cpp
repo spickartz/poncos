@@ -55,3 +55,27 @@ void controllerT::wait_for_completion_of(const size_t id) {
 
 	thread_pool[i].join();
 }
+
+void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config config,
+										   std::function<void(size_t)> callback) {
+	const std::string cmd_name = cmd_name_from_id(counter);
+
+	command += " 2>&1 ";
+	// command += "| tee ";
+	command += "> ";
+	command += cmd_name + ".log";
+
+	auto temp = system(command.c_str());
+	assert(temp != -1);
+
+	// we are done
+	std::cout << ">> \t '" << command << "' completed at configuration " << config[0].second << std::endl;
+
+	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
+	free_slots += config.size();
+	assert(free_slots <= total_available_slots);
+	callback(config[0].second);
+	worker_counter_cv.notify_one();
+}
+
+std::string controllerT::cmd_name_from_id(size_t id) const { return std::string("poncos_") + std::to_string(id); }

@@ -37,6 +37,12 @@ class controllerT {
 	const size_t &total_available_slots;
 
   protected:
+	// executed by a new thread, calls system to start the application
+	void execute_command_internal(std::string command, size_t cmd_counter, const execute_config config,
+								  std::function<void(size_t)> callback);
+	std::string cmd_name_from_id(const size_t id) const;
+
+  protected:
 	// numbers of slots free
 	size_t free_slots;
 
