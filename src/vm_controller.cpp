@@ -30,18 +30,16 @@ void vm_controller::init() { start_all_VMs(); }
 void vm_controller::dismantle() { stop_all_VMs(); }
 
 void vm_controller::freeze(const size_t id) {
-	auto t = id_to_slot.find(id);
+	assert(id < id_to_slot.size());
 
-	assert(t != id_to_slot.end());
-	size_t slot = t->second;
+	size_t slot = id_to_slot[id];
 	suspend_resume_virt_cluster<fast::msg::migfra::Suspend>(slot);
 }
 
 void vm_controller::thaw(const size_t id) {
-	auto t = id_to_slot.find(id);
+	assert(id < id_to_slot.size());
 
-	assert(t != id_to_slot.end());
-	size_t slot = t->second;
+	size_t slot = id_to_slot[id];
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(slot);
 }
 

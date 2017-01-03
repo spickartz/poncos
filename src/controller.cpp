@@ -22,7 +22,7 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 	std::cout << "==============\n";
 
 	_total_available_slots = machines.size() * SLOTS;
-	free_slots = total_available_slots;
+	free_slots = total_available_slots; // TODO split in two. one per slot
 }
 
 controllerT::~controllerT() {
@@ -46,14 +46,10 @@ void controllerT::wait_for_ressource(const size_t requested) {
 }
 
 void controllerT::wait_for_completion_of(const size_t id) {
+	assert(id < id_to_tpool.size());
 	work_counter_lock.unlock();
 
-	auto t = id_to_pool.find(id);
-
-	assert(t != id_to_pool.end());
-	auto i = t->second;
-
-	thread_pool[i].join();
+	thread_pool[id_to_tpool[id]].join();
 }
 
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
@@ -63,8 +59,8 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	assert(config.size() <= free_slots);
 	free_slots -= config.size();
 
-	id_to_pool.emplace(cmd_counter, thread_pool.size());
-	id_to_slot.emplace(cmd_counter, config[0].second);
+	id_to_tpool.push_back(thread_pool.size());
+	id_to_slot.push_back(config[0].second);
 
 	const std::string command = generate_command(job, cmd_counter, config);
 	thread_pool.emplace_back(&controllerT::execute_command_internal, this, command, cmd_counter, config, callback);
