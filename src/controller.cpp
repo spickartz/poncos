@@ -58,11 +58,13 @@ void controllerT::wait_for_completion_of(const size_t id) {
 
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(work_counter_lock.owns_lock());
+	assert(config.size() > 0);
 
 	assert(config.size() <= free_slots);
 	free_slots -= config.size();
 
 	id_to_pool.emplace(cmd_counter, thread_pool.size());
+	id_to_slot.emplace(cmd_counter, config[0].second);
 
 	const std::string command = generate_command(job, cmd_counter, config);
 	thread_pool.emplace_back(&controllerT::execute_command_internal, this, command, cmd_counter, config, callback);

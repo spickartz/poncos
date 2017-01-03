@@ -42,7 +42,6 @@ class vm_controller : public controllerT {
   private:
 	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 	std::shared_ptr<fast::msg::migfra::Start> generate_start_task(size_t slot, vm_pool_elemT &free_vm);
-	void command_done(const size_t config);
 
 	template <typename T> void suspend_resume_virt_cluster(size_t slot);
 
@@ -52,9 +51,6 @@ class vm_controller : public controllerT {
   private:
 	// path to the xml slot files
 	std::string slot_path;
-
-	// maps ids to the slots
-	std::unordered_map<size_t, size_t> id_to_slot;
 
 	// stores the VMs used in the two slots
 	// entries in the vector are read as: (host-name, guest-name)

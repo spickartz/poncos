@@ -36,7 +36,6 @@ class cgroup_controller : public controllerT {
 
   private:
 	std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const;
-	void command_done(const size_t config);
 
   private:
 };

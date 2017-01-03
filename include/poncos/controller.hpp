@@ -60,6 +60,8 @@ class controllerT {
 
 	// maps ids to the thread_pool
 	std::unordered_map<size_t, size_t> id_to_pool;
+	// maps ids to the slots
+	std::unordered_map<size_t, size_t> id_to_slot;
 
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;
