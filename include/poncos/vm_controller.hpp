@@ -44,7 +44,6 @@ class vm_controller : public controllerT {
 	void thaw_opposing(const size_t id);
 
   private:
-	execute_config generate_opposing_config(const size_t id) const;
 	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 	std::shared_ptr<fast::msg::migfra::Start> generate_start_task(size_t slot, vm_pool_elemT &free_vm);
 

@@ -12,6 +12,7 @@
 #include <fast-lib/mqtt_communicator.hpp>
 
 #include "poncos/job.hpp"
+#include "poncos/poncos.hpp"
 
 class controllerT {
   public:
@@ -27,6 +28,8 @@ class controllerT {
 
 	virtual void freeze(const size_t id) = 0;
 	virtual void thaw(const size_t id) = 0;
+	virtual void freeze_opposing(const size_t id) = 0;
+	virtual void thaw_opposing(const size_t id) = 0;
 
 	virtual size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
 
@@ -34,6 +37,9 @@ class controllerT {
 	virtual void wait_for_completion_of(const size_t);
 	virtual void done();
 
+	execute_config generate_opposing_config(const size_t id) const;
+
+	// getters
 	const std::vector<std::string> &machines;
 	const size_t &total_available_slots;
 
@@ -60,13 +66,14 @@ class controllerT {
 	std::vector<std::thread> thread_pool;
 
 	// maps ids to the thread_pool
+	// TODO shouldn't that index be identical?
 	std::vector<size_t> id_to_tpool;
 	// maps ids to the execution configuration
-	std::vector<execute_config> id_to_config; // TODO: do we need the complete config?
+	std::vector<execute_config> id_to_config;
 
 	// stores the current usage of the machines
 	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
-	std::vector<std::array<size_t, 2>> machine_usage;
+	std::vector<std::array<size_t, SLOTS>> machine_usage;
 
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;

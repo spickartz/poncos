@@ -22,7 +22,8 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 	}
 	std::cout << "==============\n";
 
-	machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()}});
+	machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
+																 std::numeric_limits<size_t>::max()}});
 
 	_total_available_slots = machines.size() * SLOTS;
 	free_slots = total_available_slots; // TODO split in two. one per slot
@@ -53,6 +54,21 @@ void controllerT::wait_for_completion_of(const size_t id) {
 	work_counter_lock.unlock();
 
 	thread_pool[id_to_tpool[id]].join();
+}
+
+controllerT::execute_config controllerT::generate_opposing_config(const size_t id) const {
+	assert(id < id_to_config.size());
+	assert(SLOTS == 2);
+
+	execute_config opposing_config;
+	const execute_config &config = id_to_config[id];
+
+	for (auto const &config_elem : config) {
+		// TODO: what abour more than two slots per host?
+		opposing_config.push_back({config_elem.first, (config_elem.second + 1) % SLOTS});
+	}
+
+	return opposing_config;
 }
 
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {

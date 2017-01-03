@@ -44,26 +44,15 @@ void vm_controller::thaw(const size_t id) {
 }
 
 void vm_controller::freeze_opposing(const size_t id) {
-	const execute_config opposing_config = generate_opposing_config(id);;
+	const execute_config opposing_config = generate_opposing_config(id);
 
 	suspend_resume_virt_cluster<fast::msg::migfra::Suspend>(opposing_config);
 }
 
 void vm_controller::thaw_opposing(const size_t id) {
-	const execute_config &opposing_config = generate_opposing_config(id);;
+	const execute_config &opposing_config = generate_opposing_config(id);
 
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(opposing_config);
-}
-controllerT::execute_config vm_controller::generate_opposing_config(const size_t id) const {
-	execute_config opposing_config;
-	const execute_config &config = id_to_config[id];
-
-	for (auto const &config_elem : config) {
-		// TODO: what abour more than two slots per host?
-		opposing_config.push_back({config_elem.first, (config_elem.second + 1) % SLOTS});
-	}
-
-	return opposing_config;
 }
 
 std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/, const execute_config &config) const {
@@ -191,7 +180,7 @@ void vm_controller::stop_all_VMs() {
 	for (auto mach : machines) {
 		// generate stop tasks
 		fast::msg::migfra::Task_container m;
-		for (size_t slot = 0; slot<SLOTS; ++slot) {
+		for (size_t slot = 0; slot < SLOTS; ++slot) {
 			auto task = std::make_shared<fast::msg::migfra::Stop>(vm_locations[mach_id][slot], false, true, true);
 			m.tasks.push_back(task);
 		}

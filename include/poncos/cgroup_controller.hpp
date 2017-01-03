@@ -33,9 +33,15 @@ class cgroup_controller : public controllerT {
 	void freeze(const size_t id);
 	// thaws all cgroups with the supplied id
 	void thaw(const size_t id);
+	// freeze cgroups opposing to the supplied id
+	void freeze_opposing(const size_t id);
+	// thaws cgroups opposing to the supplied id
+	void thaw_opposing(const size_t id);
 
   private:
 	std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const;
+
+	template <typename messageT> void send_message(const execute_config &config, const std::string topic_adn) const;
 
   private:
 };
