@@ -5,9 +5,10 @@
 
 schedulerT::~schedulerT() {}
 
-double schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
-							   const controllerT::execute_config &config) {
+std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
+											const controllerT::execute_config &config) {
 
+	assert(config.size() > 0);
 	// ask for measurements
 	{
 		for (const auto &c : config) {
@@ -27,7 +28,8 @@ double schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<
 		}
 	}
 
-	double ret = 0.0;
+	std::vector<double> ret;
+	ret.reserve(config.size());
 
 	// wait for results
 	{
@@ -38,7 +40,7 @@ double schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<
 			m.from_string(comm.get_message(topic));
 			// std::cout << "done\n";
 
-			if (m.result > ret) ret = m.result;
+			ret.push_back(m.result);
 		}
 	}
 

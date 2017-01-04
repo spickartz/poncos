@@ -57,8 +57,8 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 
 		// measure distgen result
 		std::cout << ">> \t Running distgend" << std::endl;
-		co_config_distgend[new_slot] =
-			run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		auto temp = run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		co_config_distgend[new_slot] = *std::max_element(temp.begin(), temp.end());
 
 		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
 
