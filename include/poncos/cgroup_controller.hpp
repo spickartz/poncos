@@ -38,8 +38,8 @@ class cgroup_controller : public controllerT {
 	// thaws cgroups opposing to the supplied id
 	void thaw_opposing(const size_t id);
 	// not supported
-	void swap_slots(const size_t id, const execute_config &new_config);
-	bool swap_supported() { return false; }
+	void update_config(const size_t id, const execute_config &new_config);
+	bool update_supported() { return false; }
 
   private:
 	std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const;

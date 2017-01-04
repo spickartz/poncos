@@ -110,6 +110,7 @@ static void parse_options(size_t argc, const char **argv) {
 			++i;
 			continue;
 		}
+
 		if (arg == "--wait") {
 			if (i + 1 >= argc) {
 				print_help(argv[0]);
@@ -173,7 +174,7 @@ static void command_done(const size_t config) {
 static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
-		assert(job.nprocs == controller.machines.size()*SLOT_SIZE);
+		assert(job.nprocs == controller.machines.size() * SLOT_SIZE);
 
 		controller.wait_for_ressource(job.nprocs);
 

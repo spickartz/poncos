@@ -55,8 +55,7 @@ void vm_controller::thaw_opposing(const size_t id) {
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(opposing_config);
 }
 
-void vm_controller::swap_slots(const size_t id, const execute_config &new_config) {
-
+void vm_controller::update_config(const size_t id, const execute_config &new_config) {
 	const execute_config &old_config = id_to_config[id];
 	assert(old_config.size() == new_config.size());
 
