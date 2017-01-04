@@ -92,11 +92,10 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 		controller.thaw_opposing(job_id);
 
 		bool frozen = false;
-		std::vector<size_t> marked_machines;
 
 		while (true) {
 			// for all host-id of new job
-			marked_machines = check_membw(config);
+			auto marked_machines = check_membw(config);
 
 			// everything fine?
 			if (marked_machines.size() == 0) break;
@@ -108,11 +107,9 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 				//		yes: save pair for swap
 				//		no: job must be suspended
 				// if yes for all: swap
+				//                 assert(check_membw(config).size() == 0);
+				//                 break;
 				// if no:
-				// 	wait for a job to finish
-				//	check again if membw is ok / swap
-
-				// call break if ok
 			}
 
 			if (!frozen) {
