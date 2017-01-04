@@ -119,8 +119,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 				controller.freeze(job_id);
 				frozen = true;
 			}
-			// TODO wrong
-			controller.wait_for_ressource(marked_machines.size() * SLOT_SIZE);
+			controller.wait_for_change();
 		}
 		if (frozen) controller.thaw(job_id);
 	}

@@ -37,6 +37,7 @@ class controllerT {
 	virtual size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
 
 	virtual void wait_for_ressource(const size_t);
+	virtual void wait_for_change();
 	virtual void wait_for_completion_of(const size_t);
 	virtual void done();
 

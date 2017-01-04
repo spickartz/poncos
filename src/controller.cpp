@@ -70,6 +70,12 @@ void controllerT::wait_for_ressource(const size_t requested) {
 	});
 }
 
+void controllerT::wait_for_change() {
+	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
+
+	worker_counter_cv.wait(work_counter_lock);
+}
+
 void controllerT::wait_for_completion_of(const size_t id) {
 	assert(id < id_to_tpool.size());
 	work_counter_lock.unlock();
