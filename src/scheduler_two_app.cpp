@@ -11,7 +11,7 @@
 #include "poncos/poncos.hpp"
 
 // called after a command was completed
-void two_app_sched::command_done(const size_t config) {
+void two_app_sched::command_done(const size_t config, controllerT &) {
 	co_config_in_use[config] = false;
 	co_config_distgend[config] = 0;
 }
@@ -37,7 +37,8 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 					config.emplace_back(j, new_slot);
 				}
 
-				job_id = controller.execute(job, config, [this](const size_t config) { command_done(config); });
+				job_id =
+					controller.execute(job, config, [&](const size_t config) { command_done(config, controller); });
 
 				std::cout << ">> \t starting '" << job << "' at configuration " << new_slot << std::endl;
 

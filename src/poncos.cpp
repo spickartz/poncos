@@ -17,6 +17,7 @@
 #include "poncos/cgroup_controller.hpp"
 #include "poncos/poncos.hpp"
 #include "poncos/scheduler.hpp"
+#include "poncos/scheduler_multi_app.hpp"
 #include "poncos/scheduler_two_app.hpp"
 #include "poncos/vm_controller.hpp"
 
@@ -31,10 +32,12 @@ static std::string machine_filename;
 static std::string slot_path;
 static std::chrono::seconds wait_time(20);
 static bool use_vms = false;
+static bool use_multi_sched = false;
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
 	std::cout << "\t --vm \t\t\t Enable the usage of VMs. \t\t\t Default: disabled\n";
+	std::cout << "\t --multi-sched \t\t Use the multi-app scheduler. \t\t\t Default: disabled\n";
 	std::cout << "\t --server \t\t URI of the MQTT broker. \t\t\t Required!\n";
 	std::cout << "\t --port \t\t Port of the MQTT broker. \t\t\t Default: 1883\n";
 	std::cout << "\t --queue \t\t Filename for the job queue. \t\t\t Required!\n";
@@ -108,6 +111,11 @@ static void parse_options(size_t argc, const char **argv) {
 			++i;
 			continue;
 		}
+
+		if (arg == "--multi-sched") {
+			use_multi_sched = true;
+			continue;
+		}
 	}
 
 	if (queue_filename == "" || machine_filename == "") print_help(argv[0]);
@@ -139,7 +147,11 @@ int main(int argc, char const *argv[]) {
 	else
 		controller = new cgroup_controller(comm, machine_filename);
 
-	schedulerT *sched = new two_app_sched();
+	schedulerT *sched;
+	if (use_multi_sched)
+		sched = new multi_app_sched();
+	else
+		sched = new two_app_sched();
 
 	// Create Time_measurement instance
 	fast::msg::migfra::Time_measurement timers(true);

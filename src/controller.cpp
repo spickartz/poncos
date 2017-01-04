@@ -6,8 +6,8 @@
 #include "poncos/poncos.hpp"
 
 controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename)
-	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage), cmd_counter(0),
-	  work_counter_lock(worker_counter_mutex), comm(_comm) {
+	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
+	  id_to_config(_id_to_config), cmd_counter(0), work_counter_lock(worker_counter_mutex), comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -97,7 +97,7 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	assert(config.size() > 0);
 
 	id_to_tpool.push_back(thread_pool.size());
-	id_to_config.push_back(config);
+	_id_to_config.push_back(config);
 	for (size_t i = 0; i < config.size(); ++i) {
 		assert(machine_usage[config[i].first][config[i].second] == std::numeric_limits<size_t>::max());
 		_machine_usage[config[i].first][config[i].second] = cmd_counter;

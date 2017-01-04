@@ -110,6 +110,7 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 
 		// update slot allocations
 		// TODO: update id_to_config for all affected jobs. Does this belong here?
+		//       and machine_usage. Should be done by controllerT
 		std::swap(vm_locations[src_host_idx][src_slot], vm_locations[dest_host_idx][dest_slot]);
 	}
 }

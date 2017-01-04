@@ -9,118 +9,120 @@
 #include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
 
+std::vector<size_t> multi_app_sched::check_membw(const controllerT::execute_config &config) const {
+	std::vector<size_t> marked_machines;
+	for (const auto &c : config) {
+		// get membw
+		double membw = 0.0;
+		for (size_t s = 0; s < SLOTS; ++s) {
+			membw += 1.0 - membw_util[c.first][s];
+		}
+
+		// 	membw ok?
+		// 		no -> mark it
+		if (membw > 0.9) {
+			marked_machines.push_back(c.first);
+		}
+	}
+	return marked_machines;
+}
+
 // called after a command was completed
-void multi_app_sched::command_done(const size_t config) {}
+void multi_app_sched::command_done(const size_t id, controllerT &controller) {
+	const auto &config = controller.id_to_config[id];
+
+	for (const auto &c : config) {
+		membw_util[c.first][c.second] = 0.0;
+	}
+}
 
 void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
 							   std::chrono::seconds wait_time) {
+
+	membw_util.resize(controller.machines.size(), std::array<double, 2>{{0.0, 0.0}});
+
 	// for all commands
 	for (auto job : job_queue.jobs) {
-// wait until a job is finished <- controller TODO add next job size
-// check if enough ressources are available for new job <- here
-// -> check the size of the free lists
-// no -> wait again
-// yes -> continue
+		assert(job.nprocs <= controller.machines.size() * SLOT_SIZE);
+		controller.wait_for_ressource(job.nprocs * SLOT_SIZE);
 
-// select ressources
-// -> pick one VM per machine ie use only ressources from one free list
-// -> which one is not important
-// map <host-id, std::array<2, std::pair<guest-name, free?>> <- controller
-// -> return types: - std::vector<guest-name> to start-job
-//                  - std::vector<std::pair<host-id, slot>> to find opossing VM
+		// select ressources
+		controllerT::execute_config config;
+		for (size_t m = 0; m < controller.machine_usage.size(); ++m) {
+			const auto &mu = controller.machine_usage[m];
 
-// start job on this VMs
-// controller.execute()
+			// TODO check distgen values here?
+			// -> don't use the ones that are already saturated?
+			// -> prioritize something else?
 
-// wait
-
-// stop the opposing VM
-// controller.stop_opposing(std::vector<std::pair<host-id, slot>>)
-
-// start distgen
-// -> store with job
-// -> map <host, jobs>
-
-// for all host-id of new job
-// 	membw ok?
-// 		yes -> next
-// 		no -> mark it
-// for all marked
-// 	check if there is another host available
-//		yes: save pair for swap
-//		no: job must be suspended
-// if yes for all: swap
-// if no:
-// 	wait for a job to finish
-//	check again if membw is ok / swap
-
-#if 0
-		assert(job.nprocs == controller.machines.size() * SLOT_SIZE);
-
-		controller.wait_for_ressource(job.nprocs);
-
-		// search for a free slot and assign it to a new job
-		size_t new_slot = 0;
-		size_t job_id = 0;
-		for (; new_slot < SLOTS; ++new_slot) {
-			if (!co_config_in_use[new_slot]) {
-				co_config_in_use[new_slot] = true;
-
-				cgroup_controller::execute_config config;
-
-				for (size_t j = 0; j < controller.machines.size(); ++j) {
-					config.emplace_back(j, new_slot);
+			// pick one slot per machine
+			for (size_t s = 0; s < SLOTS; ++s) {
+				if (mu[s] == std::numeric_limits<size_t>::max()) {
+					config.emplace_back(m, s);
+					break;
 				}
-
-				job_id = controller.execute(job, config, [this](const size_t config) { command_done(config); });
-
-				std::cout << ">> \t starting '" << job << "' at configuration " << new_slot << std::endl;
-
-				break;
 			}
+			if (config.size() == job.nprocs * SLOT_SIZE) break;
 		}
-		assert(new_slot < SLOTS);
+
+		assert(config.size() == job.nprocs * SLOT_SIZE);
+
+		// start job
+		auto job_id = controller.execute(job, config, [&](const size_t config) { command_done(config, controller); });
+		std::cout << ">> \t starting '" << job << std::endl;
 
 		// for the initialization phase of the application to be completed
 		std::this_thread::sleep_for(wait_time);
 
-		// check if two are running
-		if (co_config_in_use[0] && co_config_in_use[1]) {
-			// std::cout << "0: freezing old" << std::endl;
-			controller.freeze_opposing(job_id);
+		// stop the opposing VM
+		controller.freeze_opposing(job_id);
+
+		// start distgen
+		auto distgen_res =
+			schedulerT::run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		assert(distgen_res.size() == config.size());
+
+		for (size_t i = 0; i < distgen_res.size(); ++i) {
+			const auto &c = config[i];
+			assert(membw_util[c.first][c.second] == 0.0);
+			membw_util[c.first][c.second] = distgen_res[i];
 		}
 
-		// measure distgen result
-		std::cout << ">> \t Running distgend" << std::endl;
-		co_config_distgend[new_slot] =
-			run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		// restart opposing VM
+		controller.thaw_opposing(job_id);
 
-		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
+		bool frozen = false;
+		std::vector<size_t> marked_machines;
 
-		if (co_config_in_use[0] && co_config_in_use[1]) {
-			// std::cout << "0: thaw old" << std::endl;
-			controller.thaw_opposing(job_id);
+		while (true) {
+			// for all host-id of new job
+			marked_machines = check_membw(config);
 
-			std::cout << ">> \t Estimating total usage of "
-					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
+			// everything fine?
+			if (marked_machines.size() == 0) break;
 
-			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
-				std::cout << " -> we will run one" << std::endl;
-				// std::cout << "0: freezing new" << std::endl;
-				controller.freeze(job_id);
+			if (controller.update_supported()) {
+				// TODO think about migration the marked machines
+				// for all marked
+				// 	check if there is another host available
+				//		yes: save pair for swap
+				//		no: job must be suspended
+				// if yes for all: swap
+				// if no:
+				// 	wait for a job to finish
+				//	check again if membw is ok / swap
 
-				controller.wait_for_ressource(job.nprocs);
-
-				// std::cout << "0: thaw new" << std::endl;
-				controller.thaw(job_id);
-			} else {
-				std::cout << " -> we will run both applications" << std::endl;
+				// call break if ok
 			}
 
-		} else {
-			std::cout << ">> \t Just one config in use ATM" << std::endl;
+			if (!frozen) {
+				controller.freeze(job_id);
+				frozen = true;
+			}
+			controller.wait_for_ressource((job.nprocs + marked_machines.size()) * SLOT_SIZE);
 		}
-#endif
+		if (frozen) controller.thaw(job_id);
 	}
+
 	controller.done();
 }

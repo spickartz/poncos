@@ -50,6 +50,8 @@ class controllerT {
 	// stores the current usage of the machines
 	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
 	const std::vector<std::array<size_t, SLOTS>> &machine_usage;
+	// maps ids to the execution configuration
+	const std::vector<execute_config> &id_to_config;
 
   protected:
 	// executed by a new thread, calls system to start the application
@@ -73,8 +75,6 @@ class controllerT {
 	// maps ids to the thread_pool
 	// TODO shouldn't that index be identical?
 	std::vector<size_t> id_to_tpool;
-	// maps ids to the execution configuration
-	std::vector<execute_config> id_to_config;
 
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;
@@ -84,6 +84,7 @@ class controllerT {
 	size_t _available_slots;
 	std::vector<std::string> _machines;
 	std::vector<std::array<size_t, SLOTS>> _machine_usage;
+	std::vector<execute_config> _id_to_config;
 };
 
 #endif /* end of include guard: poncos_controller */

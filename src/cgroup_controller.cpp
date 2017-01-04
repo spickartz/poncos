@@ -46,12 +46,14 @@ void cgroup_controller::thaw(const size_t id) {
 }
 
 void cgroup_controller::freeze_opposing(const size_t id) {
+	// TODO probably broken if there is no opposing job!
 	const execute_config opposing_config = generate_opposing_config(id);
 
 	send_message<fast::msg::agent::mmbwmon::stop>(opposing_config, "/mmbwmon/stop");
 }
 
 void cgroup_controller::thaw_opposing(const size_t id) {
+	// TODO probably broken if there is no opposing job!
 	const execute_config opposing_config = generate_opposing_config(id);
 
 	send_message<fast::msg::agent::mmbwmon::restart>(opposing_config, "/mmbwmon/restart");
