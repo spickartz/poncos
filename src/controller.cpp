@@ -6,8 +6,8 @@
 #include "poncos/poncos.hpp"
 
 controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename)
-	: machines(_machines), available_slots(_available_slots), cmd_counter(0), work_counter_lock(worker_counter_mutex),
-	  comm(_comm) {
+	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage), cmd_counter(0),
+	  work_counter_lock(worker_counter_mutex), comm(_comm) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -22,8 +22,8 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 	}
 	std::cout << "==============\n";
 
-	machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
-																 std::numeric_limits<size_t>::max()}});
+	_machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
+																  std::numeric_limits<size_t>::max()}});
 
 	_available_slots = machines.size();
 }
@@ -100,7 +100,7 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	id_to_config.push_back(config);
 	for (size_t i = 0; i < config.size(); ++i) {
 		assert(machine_usage[config[i].first][config[i].second] == std::numeric_limits<size_t>::max());
-		machine_usage[config[i].first][config[i].second] = cmd_counter;
+		_machine_usage[config[i].first][config[i].second] = cmd_counter;
 	}
 
 	const std::string command = generate_command(job, cmd_counter, config);
@@ -128,7 +128,7 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 
 	for (size_t i = 0; i < config.size(); ++i) {
 		assert(machine_usage[config[i].first][config[i].second] != std::numeric_limits<size_t>::max());
-		machine_usage[config[i].first][config[i].second] = std::numeric_limits<size_t>::max();
+		_machine_usage[config[i].first][config[i].second] = std::numeric_limits<size_t>::max();
 	}
 
 	callback(config[0].second);

@@ -43,8 +43,13 @@ class controllerT {
 	execute_config generate_opposing_config(const size_t id) const;
 
 	// getters
+	// a list of all machines
 	const std::vector<std::string> &machines;
+	// numbers of total slots available
 	const size_t &available_slots;
+	// stores the current usage of the machines
+	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
+	const std::vector<std::array<size_t, SLOTS>> &machine_usage;
 
   protected:
 	// executed by a new thread, calls system to start the application
@@ -71,18 +76,14 @@ class controllerT {
 	// maps ids to the execution configuration
 	std::vector<execute_config> id_to_config;
 
-	// stores the current usage of the machines
-	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
-	std::vector<std::array<size_t, SLOTS>> machine_usage;
-
 	// reference to a mqtt communictor
 	std::shared_ptr<fast::MQTT_communicator> comm;
 
   private:
-	// numbers of total slots available
+	// see above for docu
 	size_t _available_slots;
-	// a list of all machines
 	std::vector<std::string> _machines;
+	std::vector<std::array<size_t, SLOTS>> _machine_usage;
 };
 
 #endif /* end of include guard: poncos_controller */
