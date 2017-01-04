@@ -11,20 +11,15 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <ctime>
 #include <iomanip>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
 
 #include "poncos/cgroup_controller.hpp"
-#include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
+#include "poncos/scheduler.hpp"
+#include "poncos/scheduler_two_app.hpp"
 #include "poncos/vm_controller.hpp"
 
-#include <fast-lib/message/agent/mmbwmon/reply.hpp>
-#include <fast-lib/message/agent/mmbwmon/request.hpp>
 #include <fast-lib/message/migfra/time_measurement.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
 
@@ -36,12 +31,6 @@ static std::string machine_filename;
 static std::string slot_path;
 static std::chrono::seconds wait_time(20);
 static bool use_vms = false;
-
-// marker if a slot is in use
-static bool co_config_in_use[SLOTS] = {false, false};
-
-// distgen results of a slot
-static double co_config_distgend[SLOTS];
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
@@ -125,123 +114,6 @@ static void parse_options(size_t argc, const char **argv) {
 	if (use_vms && slot_path == "") print_help(argv[0]);
 }
 
-static double run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
-						  const controllerT::execute_config &config) {
-
-	// ask for measurements
-	{
-		for (const auto &c : config) {
-			fast::msg::agent::mmbwmon::request m;
-
-			const auto &slot_conf = co_configs[c.second];
-
-			// TODO check if we can use the same type
-			m.cores.resize(slot_conf.cpus.size());
-			for (size_t i = 0; i < slot_conf.cpus.size(); ++i) {
-				m.cores[i] = static_cast<size_t>(slot_conf.cpus[i]);
-			}
-
-			const std::string topic = "fast/agent/" + machines[c.first] + "/mmbwmon/request";
-			// std::cout << "sending message \n topic: " << topic << "\n message:\n" << m.to_string() << std::endl;
-			comm.send_message(m.to_string(), topic);
-		}
-	}
-
-	double ret = 0.0;
-
-	// wait for results
-	{
-		for (const auto &c : config) {
-			fast::msg::agent::mmbwmon::reply m;
-			const std::string topic = "fast/agent/" + machines[c.first] + "/mmbwmon/response";
-			// std::cout << "waiting on topic: " << topic << " ... " << std::flush;
-			m.from_string(comm.get_message(topic));
-			// std::cout << "done\n";
-
-			if (m.result > ret) ret = m.result;
-		}
-	}
-
-	return ret;
-}
-
-// called after a command was completed
-static void command_done(const size_t config) {
-	co_config_in_use[config] = false;
-	co_config_distgend[config] = 0;
-}
-
-static void coschedule_queue(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller) {
-	// for all commands
-	for (auto job : job_queue.jobs) {
-		assert(job.nprocs == controller.machines.size() * SLOT_SIZE);
-
-		controller.wait_for_ressource(job.nprocs);
-
-		// search for a free slot and assign it to a new job
-		size_t new_slot = 0;
-		size_t job_id = 0;
-		for (; new_slot < SLOTS; ++new_slot) {
-			if (!co_config_in_use[new_slot]) {
-				co_config_in_use[new_slot] = true;
-
-				cgroup_controller::execute_config config;
-
-				for (size_t j = 0; j < controller.machines.size(); ++j) {
-					config.emplace_back(j, new_slot);
-				}
-
-				job_id = controller.execute(job, config, command_done);
-
-				std::cout << ">> \t starting '" << job << "' at configuration " << new_slot << std::endl;
-
-				break;
-			}
-		}
-		assert(new_slot < SLOTS);
-
-		// for the initialization phase of the application to be completed
-		std::this_thread::sleep_for(wait_time);
-
-		// check if two are running
-		if (co_config_in_use[0] && co_config_in_use[1]) {
-			// std::cout << "0: freezing old" << std::endl;
-			controller.freeze_opposing(job_id);
-		}
-
-		// measure distgen result
-		std::cout << ">> \t Running distgend" << std::endl;
-		co_config_distgend[new_slot] =
-			run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
-
-		std::cout << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot] << std::endl;
-
-		if (co_config_in_use[0] && co_config_in_use[1]) {
-			// std::cout << "0: thaw old" << std::endl;
-			controller.thaw_opposing(job_id);
-
-			std::cout << ">> \t Estimating total usage of "
-					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
-
-			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
-				std::cout << " -> we will run one" << std::endl;
-				// std::cout << "0: freezing new" << std::endl;
-				controller.freeze(job_id);
-
-				controller.wait_for_ressource(job.nprocs);
-
-				// std::cout << "0: thaw new" << std::endl;
-				controller.thaw(job_id);
-			} else {
-				std::cout << " -> we will run both applications" << std::endl;
-			}
-
-		} else {
-			std::cout << ">> \t Just one config in use ATM" << std::endl;
-		}
-	}
-	controller.done();
-}
 #if 0
 static void coschedule_queue_with_migration(const job_queueT &job_queue, fast::MQTT_communicator &comm,
 											controllerT &controller) {
@@ -313,6 +185,8 @@ int main(int argc, char const *argv[]) {
 	else
 		controller = new cgroup_controller(comm, machine_filename);
 
+	schedulerT *sched = new two_app_sched();
+
 	// Create Time_measurement instance
 	fast::msg::migfra::Time_measurement timers(true);
 
@@ -330,7 +204,7 @@ int main(int argc, char const *argv[]) {
 	std::cout << "MQTT ready!\n\n";
 
 	timers.tick("Runtime");
-	coschedule_queue(job_queue, *comm, *controller);
+	sched->schedule(job_queue, *comm, *controller, wait_time);
 	timers.tock("Runtime");
 
 	timers.tick("Stop time");
@@ -354,4 +228,7 @@ int main(int argc, char const *argv[]) {
 	std::cout << "Stop time : " << std::setw(maxwidth) << std::fixed << timers.emit()["Stop time"].as<double>() << " s"
 			  << std::endl;
 	std::cout << "Total time: " << std::setw(maxwidth) << total_time_str << " s" << std::endl;
+
+	delete sched;
+	delete controller;
 }
