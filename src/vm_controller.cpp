@@ -56,6 +56,7 @@ void vm_controller::thaw_opposing(const size_t id) {
 }
 
 void vm_controller::swap_slots(const size_t id, const execute_config &new_config) {
+
 	const execute_config &old_config = id_to_config[id];
 	assert(old_config.size() == new_config.size());
 
@@ -63,18 +64,19 @@ void vm_controller::swap_slots(const size_t id, const execute_config &new_config
 	for (size_t idx = 0; idx < new_config.size(); ++idx) {
 		const size_t src_host_idx = old_config[idx].first;
 		const size_t dest_host_idx = new_config[idx].first;
-		const size_t src_guest_idx = old_config[idx].second;
-		const size_t dest_guest_idx = new_config[idx].second;
+		const size_t src_slot = old_config[idx].second;
+		const size_t dest_slot = new_config[idx].second;
 
 		// source and destination host are the same
 		if (src_host_idx == dest_host_idx) {
+			assert(src_slot == dest_slot);
 			continue;
 		}
 
 		const std::string &src_host = machines[src_host_idx];
 		const std::string &dest_host = machines[dest_host_idx];
-		const std::string &src_guest = vm_locations[src_host_idx][src_guest_idx];
-		const std::string &dest_guest = vm_locations[dest_host_idx][dest_guest_idx];
+		const std::string &src_guest = vm_locations[src_host_idx][src_slot];
+		const std::string &dest_guest = vm_locations[dest_host_idx][dest_slot];
 
 		// generate migrate task and put into task container
 		std::string topic = "fast/migfra/" + src_host + "/task";
@@ -94,8 +96,8 @@ void vm_controller::swap_slots(const size_t id, const execute_config &new_config
 	for (size_t idx = 0; idx < new_config.size(); ++idx) {
 		const size_t src_host_idx = old_config[idx].first;
 		const size_t dest_host_idx = new_config[idx].first;
-		const size_t src_guest_idx = old_config[idx].second;
-		const size_t dest_guest_idx = new_config[idx].second;
+		const size_t src_slot = old_config[idx].second;
+		const size_t dest_slot = new_config[idx].second;
 
 		// source and destination host are the same
 		if (src_host_idx == dest_host_idx) {
@@ -108,10 +110,9 @@ void vm_controller::swap_slots(const size_t id, const execute_config &new_config
 		assert(!response.results.front().status.compare("success"));
 
 		// update slot allocations
-		std::swap(vm_locations[src_host_idx][src_guest_idx], vm_locations[dest_host_idx][dest_guest_idx]);
+		// TODO: update id_to_config for all affected jobs. Does this belong here?
+		std::swap(vm_locations[src_host_idx][src_slot], vm_locations[dest_host_idx][dest_slot]);
 	}
-
-	// TODO: update id_to_config for all affected jobs. Does this belong here?
 }
 
 std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/, const execute_config &config) const {

@@ -30,6 +30,8 @@ class controllerT {
 	virtual void thaw(const size_t id) = 0;
 	virtual void freeze_opposing(const size_t id) = 0;
 	virtual void thaw_opposing(const size_t id) = 0;
+	virtual void swap_slots(const size_t id, const execute_config &new_config) = 0;
+	virtual bool swap_supported() = 0;
 
 	virtual size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
 

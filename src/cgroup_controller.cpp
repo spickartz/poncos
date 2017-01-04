@@ -74,6 +74,8 @@ void cgroup_controller::send_message(const controllerT::execute_config &config, 
 	}
 }
 
+void cgroup_controller::swap_slots(const size_t /*id*/, const execute_config & /*new_config*/) { assert(false); }
+
 std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	std::string host_lists[SLOTS];
 	size_t hosts_per_slot[SLOTS];
