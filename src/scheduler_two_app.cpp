@@ -31,7 +31,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 			if (!co_config_in_use[new_slot]) {
 				co_config_in_use[new_slot] = true;
 
-				cgroup_controller::execute_config config;
+				controllerT::execute_config config;
 
 				for (size_t j = 0; j < controller.machines.size(); ++j) {
 					config.emplace_back(j, new_slot);
