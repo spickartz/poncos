@@ -1,25 +1,60 @@
-#include "poncos/scheduler_two_app.hpp"
+#include "poncos/scheduler_multi_app.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <iostream>
-#include <memory>
 
-#include "poncos/controller.hpp"
+#include "poncos/cgroup_controller.hpp"
 #include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
 
 // called after a command was completed
-void two_app_sched::command_done(const size_t config) {
-	co_config_in_use[config] = false;
-	co_config_distgend[config] = 0;
-}
+void multi_app_sched::command_done(const size_t config) {}
 
-void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
-							 std::chrono::seconds wait_time) {
+void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
+							   std::chrono::seconds wait_time) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
+// wait until a job is finished <- controller TODO add next job size
+// check if enough ressources are available for new job <- here
+// -> check the size of the free lists
+// no -> wait again
+// yes -> continue
+
+// select ressources
+// -> pick one VM per machine ie use only ressources from one free list
+// -> which one is not important
+// map <host-id, std::array<2, std::pair<guest-name, free?>> <- controller
+// -> return types: - std::vector<guest-name> to start-job
+//                  - std::vector<std::pair<host-id, slot>> to find opossing VM
+
+// start job on this VMs
+// controller.execute()
+
+// wait
+
+// stop the opposing VM
+// controller.stop_opposing(std::vector<std::pair<host-id, slot>>)
+
+// start distgen
+// -> store with job
+// -> map <host, jobs>
+
+// for all host-id of new job
+// 	membw ok?
+// 		yes -> next
+// 		no -> mark it
+// for all marked
+// 	check if there is another host available
+//		yes: save pair for swap
+//		no: job must be suspended
+// if yes for all: swap
+// if no:
+// 	wait for a job to finish
+//	check again if membw is ok / swap
+
+#if 0
 		assert(job.nprocs == controller.machines.size() * SLOT_SIZE);
 
 		controller.wait_for_ressource(job.nprocs);
@@ -85,6 +120,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 		} else {
 			std::cout << ">> \t Just one config in use ATM" << std::endl;
 		}
+#endif
 	}
 	controller.done();
 }

@@ -114,52 +114,6 @@ static void parse_options(size_t argc, const char **argv) {
 	if (use_vms && slot_path == "") print_help(argv[0]);
 }
 
-#if 0
-static void coschedule_queue_with_migration(const job_queueT &job_queue, fast::MQTT_communicator &comm,
-											controllerT &controller) {
-	// for all commands
-	for (auto job : job_queue.jobs) {
-		// wait until a job is finished <- controller TODO add next job size
-		// check if enough ressources are available for new job <- here
-		// -> check the size of the free lists
-		// no -> wait again
-		// yes -> continue
-
-		// select ressources
-		// -> pick one VM per machine ie use only ressources from one free list
-		// -> which one is not important
-		// map <host-id, std::array<2, std::pair<guest-name, free?>> <- controller
-		// -> return types: - std::vector<guest-name> to start-job
-		//                  - std::vector<std::pair<host-id, slot>> to find opossing VM
-
-		// start job on this VMs
-		// controller.execute()
-
-		// wait
-
-		// stop the opposing VM
-		// controller.stop_opposing(std::vector<std::pair<host-id, slot>>)
-
-		// start distgen
-		// -> store with job
-		// -> map <host, jobs>
-
-		// for all host-id of new job
-		// 	membw ok?
-		// 		yes -> next
-		// 		no -> mark it
-		// for all marked
-		// 	check if there is another host available
-		//		yes: save pair for swap
-		//		no: job must be suspended
-		// if yes for all: swap
-		// if no:
-		// 	wait for a job to finish
-		//	check again if membw is ok / swap
-	}
-}
-#endif
-
 int main(int argc, char const *argv[]) {
 	parse_options(static_cast<size_t>(argc), argv);
 
