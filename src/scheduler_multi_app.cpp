@@ -62,10 +62,10 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 					break;
 				}
 			}
-			if (config.size() == job.nprocs * SLOT_SIZE) break;
+			if (config.size() * SLOT_SIZE == job.nprocs) break;
 		}
 
-		assert(config.size() == job.nprocs * SLOT_SIZE);
+		assert(config.size() * SLOT_SIZE == job.nprocs);
 
 		// start job
 		auto job_id = controller.execute(job, config, [&](const size_t config) { command_done(config, controller); });
