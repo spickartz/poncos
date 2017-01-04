@@ -8,8 +8,6 @@
  * Some rights reserved. See LICENSE
  */
 
-#include <algorithm>
-#include <cassert>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
