@@ -18,15 +18,15 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 
 	std::cout << "Machine file:\n";
 	std::cout << "==============\n";
-	for (const std::string& c : machines) {
+	for (const std::string &c : _machines) {
 		std::cout << c << "\n";
 	}
 	std::cout << "==============\n";
 
-	_machine_usage.assign(machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
-																  std::numeric_limits<size_t>::max()}});
+	_machine_usage.assign(_machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
+																   std::numeric_limits<size_t>::max()}});
 
-	_available_slots = machines.size();
+	_available_slots = _machines.size();
 }
 
 controllerT::~controllerT() {
@@ -105,7 +105,7 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 
 	id_to_tpool.push_back(thread_pool.size());
 	_id_to_config.push_back(config);
-	for (const auto & i : config) {
+	for (const auto &i : config) {
 		assert(machine_usage[i.first][i.second] == std::numeric_limits<size_t>::max());
 		_machine_usage[i.first][i.second] = cmd_counter;
 	}
@@ -116,8 +116,8 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	return cmd_counter++;
 }
 
-void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config& config,
-										   const std::function<void(size_t)>& callback) {
+void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config &config,
+										   const std::function<void(size_t)> &callback) {
 	const std::string cmd_name = cmd_name_from_id(counter);
 
 	command += " 2>&1 ";
@@ -133,7 +133,7 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 
-	for (const auto & i : config) {
+	for (const auto &i : config) {
 		assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());
 		_machine_usage[i.first][i.second] = std::numeric_limits<size_t>::max();
 	}

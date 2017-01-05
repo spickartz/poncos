@@ -34,12 +34,12 @@ class controllerT {
 	virtual void update_config(const size_t id, const execute_config &new_config) = 0;
 	virtual bool update_supported() = 0;
 
-	virtual size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
+	size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
 
-	virtual void wait_for_ressource(const size_t);
-	virtual void wait_for_change();
-	virtual void wait_for_completion_of(const size_t);
-	virtual void done();
+	void wait_for_ressource(const size_t);
+	void wait_for_change();
+	void wait_for_completion_of(const size_t);
+	void done();
 
 	execute_config generate_opposing_config(const size_t id) const;
 
@@ -56,8 +56,8 @@ class controllerT {
 
   protected:
 	// executed by a new thread, calls system to start the application
-	void execute_command_internal(std::string command, size_t counter, const execute_config& config,
-								  const std::function<void(size_t)>& callback);
+	void execute_command_internal(std::string command, size_t counter, const execute_config &config,
+								  const std::function<void(size_t)> &callback);
 	virtual std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const = 0;
 	std::string cmd_name_from_id(const size_t id) const;
 
