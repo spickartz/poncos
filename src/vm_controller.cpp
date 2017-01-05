@@ -18,7 +18,7 @@ vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_co
 							 std::string _slot_path)
 	: controllerT(_comm, machine_filename), slot_path(std::move(_slot_path)) {
 	// subscribe to the various topics
-	for (const std::string& mach : machines) {
+	for (const std::string &mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		comm->add_subscription(topic);
 	}
@@ -110,10 +110,11 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 		assert(!response.results.front().status.compare("success"));
 
 		// update slot allocations
-		// TODO: update id_to_config for all affected jobs. Does this belong here?
-		//       and machine_usage. Should be done by controllerT
 		std::swap(vm_locations[src_host_idx][src_slot], vm_locations[dest_host_idx][dest_slot]);
 	}
+
+	// update id_to_config for all affected jobs and machine_usage.
+	controllerT::update_config(id, new_config);
 }
 
 std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/, const execute_config &config) const {
@@ -194,7 +195,7 @@ template <typename T> void vm_controller::suspend_resume_virt_cluster(const exec
 }
 
 void vm_controller::start_all_VMs() {
-	for (const auto& mach : machines) {
+	for (const auto &mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/task";
 
 		// create task container and add tasks per slot
@@ -223,7 +224,7 @@ void vm_controller::start_all_VMs() {
 	}
 
 	fast::msg::migfra::Result_container response;
-	for (const auto& mach : machines) {
+	for (const auto &mach : machines) {
 		// wait for VMs to be started
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));
@@ -238,7 +239,7 @@ void vm_controller::start_all_VMs() {
 void vm_controller::stop_all_VMs() {
 	// request stop of all VMs per host
 	size_t mach_id = 0;
-	for (const auto& mach : machines) {
+	for (const auto &mach : machines) {
 		// generate stop tasks
 		fast::msg::migfra::Task_container m;
 		for (size_t slot = 0; slot < SLOTS; ++slot) {
@@ -256,7 +257,7 @@ void vm_controller::stop_all_VMs() {
 
 	// wait for completion
 	fast::msg::migfra::Result_container response;
-	for (const auto& mach : machines) {
+	for (const auto &mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));
 		for (auto result : response.results) {

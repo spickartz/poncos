@@ -99,6 +99,46 @@ controllerT::execute_config controllerT::generate_opposing_config(const size_t i
 	return opposing_config;
 }
 
+void controllerT::update_config(const size_t id, const execute_config &new_config) {
+	execute_config &old_config = _id_to_config[id];
+	assert(new_config.size() == old_config.size());
+
+	// update id_to_config for all affected jobs and machine_usage.
+	for (size_t i = 0; i < new_config.size(); ++i) {
+		auto &oc = old_config[i];
+		const auto &nc = new_config[i];
+
+		// get the config of the opposing job
+		const size_t op_job_id = machine_usage[nc.first][nc.second];
+		std::swap(_machine_usage[oc.first][oc.second], _machine_usage[nc.first][nc.second]);
+
+		// is there any "oposite job"?
+		if (op_job_id == std::numeric_limits<size_t>::max()) {
+			// no? We only need to update our config
+			oc = nc;
+			continue;
+		}
+
+		// yes? get the oposing config
+		execute_config &op_config = _id_to_config[op_job_id];
+
+		// find entry that matches our current entry in the new config
+		bool success = false;
+		for (auto &opc : op_config) {
+			if (opc.first == nc.first && opc.second == nc.second) {
+				// swap both configs
+				std::swap(opc, oc);
+				success = true;
+				break;
+			}
+		}
+		assert(success);
+	}
+
+	// "old" config should now be updated to the new config
+	assert(old_config == new_config);
+}
+
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(work_counter_lock.owns_lock());
 	assert(!config.empty());
