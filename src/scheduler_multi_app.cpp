@@ -98,7 +98,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			auto marked_machines = check_membw(config);
 
 			// everything fine?
-			if (marked_machines.size() == 0) break;
+			if (marked_machines.empty()) break;
 
 			if (controller.update_supported()) {
 				// TODO think about migration the marked machines

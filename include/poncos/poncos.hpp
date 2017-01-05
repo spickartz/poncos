@@ -34,6 +34,6 @@ constexpr size_t SLOT_SIZE = 8;
 constexpr size_t SLOTS = 2;
 extern const sched_configT co_configs[SLOTS];
 
-void read_file(std::string filename, std::vector<std::string> &command_queue);
+void read_file(const std::string& filename, std::vector<std::string> &command_queue);
 
 #endif /* end of include guard: poncos_hpp */

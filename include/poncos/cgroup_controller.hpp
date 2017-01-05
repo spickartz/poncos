@@ -42,9 +42,9 @@ class cgroup_controller : public controllerT {
 	bool update_supported() { return false; }
 
   private:
-	std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const;
+	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 
-	template <typename messageT> void send_message(const execute_config &config, const std::string topic_adn) const;
+	template <typename messageT> void send_message(const execute_config &config, const std::string& topic_adn) const;
 
   private:
 };

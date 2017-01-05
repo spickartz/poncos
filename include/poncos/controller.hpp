@@ -20,7 +20,7 @@ class controllerT {
 	using execute_config = std::vector<std::pair<size_t, size_t>>;
 
   public:
-	controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename);
+	controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename);
 	virtual ~controllerT();
 
 	virtual void init() = 0;
@@ -56,8 +56,8 @@ class controllerT {
 
   protected:
 	// executed by a new thread, calls system to start the application
-	void execute_command_internal(std::string command, size_t cmd_counter, const execute_config config,
-								  std::function<void(size_t)> callback);
+	void execute_command_internal(std::string command, size_t counter, const execute_config& config,
+								  const std::function<void(size_t)>& callback);
 	virtual std::string generate_command(const jobT &command, size_t counter, const execute_config &config) const = 0;
 	std::string cmd_name_from_id(const size_t id) const;
 

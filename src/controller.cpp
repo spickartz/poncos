@@ -2,12 +2,13 @@
 
 #include <iostream>
 #include <limits>
+#include <utility>
 
 #include "poncos/poncos.hpp"
 
-controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename)
+controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename)
 	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
-	  id_to_config(_id_to_config), cmd_counter(0), work_counter_lock(worker_counter_mutex), comm(_comm) {
+	  id_to_config(_id_to_config), cmd_counter(0), work_counter_lock(worker_counter_mutex), comm(std::move(_comm)) {
 
 	// fill the machine file
 	std::cout << "Reading machine file " << machine_filename << " ...";
@@ -17,7 +18,7 @@ controllerT::controllerT(const std::shared_ptr<fast::MQTT_communicator> &_comm, 
 
 	std::cout << "Machine file:\n";
 	std::cout << "==============\n";
-	for (std::string c : machines) {
+	for (const std::string& c : machines) {
 		std::cout << c << "\n";
 	}
 	std::cout << "==============\n";
@@ -40,9 +41,9 @@ void controllerT::done() {
 	// wait until all workers are finished
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 	worker_counter_cv.wait(work_counter_lock, [&] {
-		for (size_t i = 0; i < machine_usage.size(); ++i) {
+		for (auto i : machine_usage) {
 			for (size_t s = 0; s < SLOTS; ++s) {
-				if (machine_usage[i][s] != std::numeric_limits<size_t>::max()) return false;
+				if (i[s] != std::numeric_limits<size_t>::max()) return false;
 			}
 		}
 
@@ -57,9 +58,9 @@ void controllerT::wait_for_ressource(const size_t requested) {
 		// TODO maybe we should not do this lazy but keep it updated all the time
 		size_t counter = 0;
 
-		for (size_t i = 0; i < machine_usage.size(); ++i) {
+		for (auto i : machine_usage) {
 			for (size_t s = 0; s < SLOTS; ++s) {
-				if (machine_usage[i][s] == std::numeric_limits<size_t>::max()) {
+				if (i[s] == std::numeric_limits<size_t>::max()) {
 					counter += SLOT_SIZE;
 					break;
 				}
@@ -85,14 +86,14 @@ void controllerT::wait_for_completion_of(const size_t id) {
 
 controllerT::execute_config controllerT::generate_opposing_config(const size_t id) const {
 	assert(id < id_to_config.size());
-	assert(SLOTS == 2);
+	static_assert(SLOTS == 2, "");
 
 	execute_config opposing_config;
 	const execute_config &config = id_to_config[id];
 
 	for (auto const &config_elem : config) {
 		// TODO: what abour more than two slots per host?
-		opposing_config.push_back({config_elem.first, (config_elem.second + 1) % SLOTS});
+		opposing_config.emplace_back(config_elem.first, (config_elem.second + 1) % SLOTS);
 	}
 
 	return opposing_config;
@@ -100,13 +101,13 @@ controllerT::execute_config controllerT::generate_opposing_config(const size_t i
 
 size_t controllerT::execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback) {
 	assert(work_counter_lock.owns_lock());
-	assert(config.size() > 0);
+	assert(!config.empty());
 
 	id_to_tpool.push_back(thread_pool.size());
 	_id_to_config.push_back(config);
-	for (size_t i = 0; i < config.size(); ++i) {
-		assert(machine_usage[config[i].first][config[i].second] == std::numeric_limits<size_t>::max());
-		_machine_usage[config[i].first][config[i].second] = cmd_counter;
+	for (const auto & i : config) {
+		assert(machine_usage[i.first][i.second] == std::numeric_limits<size_t>::max());
+		_machine_usage[i.first][i.second] = cmd_counter;
 	}
 
 	const std::string command = generate_command(job, cmd_counter, config);
@@ -115,8 +116,8 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 	return cmd_counter++;
 }
 
-void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config config,
-										   std::function<void(size_t)> callback) {
+void controllerT::execute_command_internal(std::string command, size_t counter, const execute_config& config,
+										   const std::function<void(size_t)>& callback) {
 	const std::string cmd_name = cmd_name_from_id(counter);
 
 	command += " 2>&1 ";
@@ -132,9 +133,9 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 
-	for (size_t i = 0; i < config.size(); ++i) {
-		assert(machine_usage[config[i].first][config[i].second] != std::numeric_limits<size_t>::max());
-		_machine_usage[config[i].first][config[i].second] = std::numeric_limits<size_t>::max();
+	for (const auto & i : config) {
+		assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());
+		_machine_usage[i.first][i.second] = std::numeric_limits<size_t>::max();
 	}
 
 	callback(config[0].second);

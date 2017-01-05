@@ -8,22 +8,23 @@
 #include <regex>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "poncos/poncos.hpp"
 
 #include <uuid/uuid.h>
 
 vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
-							 const std::string &_slot_path)
-	: controllerT(_comm, machine_filename), slot_path(_slot_path) {
+							 std::string _slot_path)
+	: controllerT(_comm, machine_filename), slot_path(std::move(_slot_path)) {
 	// subscribe to the various topics
-	for (std::string mach : machines) {
+	for (const std::string& mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		comm->add_subscription(topic);
 	}
 }
 
-vm_controller::~vm_controller() {}
+vm_controller::~vm_controller() = default;
 
 void vm_controller::init() { start_all_VMs(); }
 
@@ -140,7 +141,7 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 	std::regex name_regex("(<name>)(.+)(</name>)");
 	slot_xml = std::regex_replace(slot_xml, name_regex, "$1" + free_vm.name + "$3");
 	// -- disc
-	std::regex disk_regex("(.*<source file=\".*)(parastation-.*)([.]qcow2\"/>)");
+	std::regex disk_regex(R"((.*<source file=".*)(parastation-.*)([.]qcow2"/>))");
 	slot_xml = std::regex_replace(slot_xml, disk_regex, "$1" + free_vm.name + "$3");
 
 	// -- uuid
@@ -157,7 +158,7 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 
 	// generate start task and return
 	std::vector<fast::msg::migfra::PCI_id> pci_ids;
-	pci_ids.push_back(fast::msg::migfra::PCI_id(0x15b3, 0x1004));
+	pci_ids.emplace_back(0x15b3, 0x1004);
 
 	return std::make_shared<fast::msg::migfra::Start>(slot_xml, pci_ids, true);
 }
@@ -193,7 +194,7 @@ template <typename T> void vm_controller::suspend_resume_virt_cluster(const exec
 }
 
 void vm_controller::start_all_VMs() {
-	for (auto mach : machines) {
+	for (const auto& mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/task";
 
 		// create task container and add tasks per slot
@@ -222,7 +223,7 @@ void vm_controller::start_all_VMs() {
 	}
 
 	fast::msg::migfra::Result_container response;
-	for (auto mach : machines) {
+	for (const auto& mach : machines) {
 		// wait for VMs to be started
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));
@@ -237,7 +238,7 @@ void vm_controller::start_all_VMs() {
 void vm_controller::stop_all_VMs() {
 	// request stop of all VMs per host
 	size_t mach_id = 0;
-	for (auto mach : machines) {
+	for (const auto& mach : machines) {
 		// generate stop tasks
 		fast::msg::migfra::Task_container m;
 		for (size_t slot = 0; slot < SLOTS; ++slot) {
@@ -255,7 +256,7 @@ void vm_controller::stop_all_VMs() {
 
 	// wait for completion
 	fast::msg::migfra::Result_container response;
-	for (auto mach : machines) {
+	for (const auto& mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));
 		for (auto result : response.results) {

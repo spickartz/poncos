@@ -130,7 +130,7 @@ int main(int argc, char const *argv[]) {
 
 	std::cout << "Job queue:\n";
 	std::cout << "==============\n";
-	for (auto job : job_queue.jobs) {
+	for (const auto& job : job_queue.jobs) {
 		std::cout << job << "\n";
 	}
 	std::cout << "==============\n";
@@ -160,7 +160,7 @@ int main(int argc, char const *argv[]) {
 	timers.tock("Start time");
 
 	// subscribe to the various topics
-	for (std::string mach : controller->machines) {
+	for (const std::string& mach : controller->machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/response";
 		comm->add_subscription(topic);
 	}
@@ -184,7 +184,7 @@ int main(int argc, char const *argv[]) {
 	std::stringstream total_time_stream;
 	total_time_stream << std::fixed << total_time;
 	std::string total_time_str = total_time_stream.str();
-	const int maxwidth = static_cast<int>(total_time_str.length());
+	const auto maxwidth = static_cast<int>(total_time_str.length());
 	std::cout << "Start time: " << std::setw(maxwidth) << std::fixed << timers.emit()["Start time"].as<double>() << " s"
 			  << std::endl;
 	std::cout << "Runtime   : " << std::setw(maxwidth) << std::fixed << timers.emit()["Runtime"].as<double>() << " s"

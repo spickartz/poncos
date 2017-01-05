@@ -3,12 +3,12 @@
 #include <fast-lib/message/agent/mmbwmon/reply.hpp>
 #include <fast-lib/message/agent/mmbwmon/request.hpp>
 
-schedulerT::~schedulerT() {}
+schedulerT::~schedulerT() = default;
 
 std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
 											const controllerT::execute_config &config) {
 
-	assert(config.size() > 0);
+	assert(!config.empty());
 	// ask for measurements
 	{
 		for (const auto &c : config) {

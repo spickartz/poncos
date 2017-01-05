@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-jobT::jobT(size_t nprocs, std::string command) : nprocs(std::move(nprocs)), command(std::move(command)) {}
+jobT::jobT(size_t nprocs, std::string command) : nprocs(nprocs), command(std::move(command)) {}
 
 YAML::Node jobT::emit() const {
 	YAML::Node node;

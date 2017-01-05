@@ -11,7 +11,7 @@
 #include "poncos/poncos.hpp"
 
 // called after a command was completed
-void two_app_sched::command_done(const size_t config, controllerT &) {
+void two_app_sched::command_done(const size_t config, controllerT & /*controller*/) {
 	co_config_in_use[config] = false;
 	co_config_distgend[config] = 0;
 }
