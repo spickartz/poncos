@@ -92,6 +92,5 @@ script:
   - cmake -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC -DCMAKE_INSTALL_PREFIX=/tmp/ ..
   - if [ -n "$RUNCLANGTIDY" ]; then cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true ..; fi
   - make
-  - make install
   - cd ..
   - if [ -n "$RUNCLANGTIDY" ]; then git ls-files '*.cpp' | xargs -P 1 -I{} clang-tidy -p build/ -header-filter="^((?\!build).)*$" {}; fi
