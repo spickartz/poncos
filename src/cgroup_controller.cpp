@@ -16,7 +16,7 @@ cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicat
 									 const std::string &machine_filename)
 	: controllerT(_comm, machine_filename) {
 	// subscribe to the various topics
-	for (const std::string& mach : machines) {
+	for (const std::string &mach : machines) {
 		std::string topic = "fast/agent/" + mach + "/mmbwmon/restart/ack";
 		comm->add_subscription(topic);
 		topic = "fast/agent/" + mach + "/mmbwmon/stop/ack";
@@ -60,7 +60,7 @@ void cgroup_controller::thaw_opposing(const size_t id) {
 }
 
 template <typename messageT>
-void cgroup_controller::send_message(const controllerT::execute_config &config, const std::string& topic_adn) const {
+void cgroup_controller::send_message(const controllerT::execute_config &config, const std::string &topic_adn) const {
 	for (auto config_elem : config) {
 		const size_t id = machine_usage[config_elem.first][config_elem.second];
 		const messageT m(cmd_name_from_id(id));
@@ -81,7 +81,7 @@ void cgroup_controller::update_config(const size_t /*id*/, const execute_config 
 std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	std::string host_lists[SLOTS];
 	size_t hosts_per_slot[SLOTS];
-	for (unsigned long & s : hosts_per_slot) s = 0;
+	for (unsigned long &s : hosts_per_slot) s = 0;
 
 	for (std::pair<size_t, size_t> p : config) {
 		host_lists[p.second] += machines[p.first] + ",";
@@ -128,7 +128,6 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		if (hosts_per_slot[slot] == 0) continue;
 
 		if (add_colon) ret += " : ";
-		add_colon = false;
 
 		ret += "-np " + std::to_string(hosts_per_slot[slot]) + " -hosts " + host_lists[slot] + commands[slot];
 		add_colon = true;
