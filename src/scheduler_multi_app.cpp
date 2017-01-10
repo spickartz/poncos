@@ -67,7 +67,8 @@ std::vector<size_t> multi_app_sched::check_membw(const controllerT::execute_conf
 }
 
 // update membw_util in accordance with new_config
-void multi_app_sched::update_membw_util(const controllerT::execute_config &old_config, const controllerT::execute_config &new_config) {
+void multi_app_sched::update_membw_util(const controllerT::execute_config &old_config,
+										const controllerT::execute_config &new_config) {
 	assert(old_config.size() == new_config.size());
 
 	for (size_t idx = 0; idx < new_config.size(); ++idx) {
@@ -82,10 +83,9 @@ void multi_app_sched::update_membw_util(const controllerT::execute_config &old_c
 	}
 }
 
-
 controllerT::execute_config multi_app_sched::generate_new_config(const controllerT::execute_config &old_config,
 																 const std::vector<size_t> marked_machines,
-																 const std::vector<size_t> swap_candidates) {
+																 const std::vector<size_t> swap_candidates) const {
 	// are there any swap candidates?
 	if (swap_candidates.empty()) {
 		return {};
@@ -119,14 +119,14 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 		// 	slot exhibits the lower membw_util on old_mach, we
 		// 	should swap with the slot having the higher value on the
 		// 	new_mach and vice versa.
-		std::array<double, SLOTS>::iterator new_slot_it;
+		std::array<double, SLOTS>::const_iterator new_slot_it;
 		if (membw_util[old_mach][old_slot] <
 			membw_util[old_mach][(old_slot + 1) % SLOTS]) { // TODO: what about more than 2 SLOTS?
 			new_slot_it = std::max_element(membw_util[new_mach].begin(), membw_util[new_mach].end());
 		} else {
 			new_slot_it = std::min_element(membw_util[new_mach].begin(), membw_util[new_mach].end());
 		}
-		const size_t new_slot = std::distance(membw_util[new_mach].begin(), new_slot_it);
+		const size_t new_slot = static_cast<size_t>(std::distance(membw_util[new_mach].begin(), new_slot_it));
 		assert(membw_util[old_mach][(old_slot + 1) % SLOTS] + membw_util[new_mach][new_slot] < PER_MACHINE_TH);
 		assert(membw_util[new_mach][(new_slot + 1) % SLOTS] + membw_util[old_mach][old_slot] < PER_MACHINE_TH);
 
@@ -139,7 +139,8 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 	for (auto &config_elem : old_config) {
 		auto machine_pos = std::find(marked_machines_sorted.begin(), marked_machines_sorted.end(), config_elem.first);
 		if (machine_pos != marked_machines_sorted.end()) {
-			new_config.emplace_back(new_config_sorted[machine_pos - marked_machines_sorted.begin()]);
+			new_config.emplace_back(
+				new_config_sorted[static_cast<size_t>(machine_pos - marked_machines_sorted.begin())]);
 		} else {
 			new_config.emplace_back(config_elem);
 		}
