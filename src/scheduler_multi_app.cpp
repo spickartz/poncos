@@ -110,6 +110,7 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 		// determine slot on old_mach
 		const auto old_slot_it = std::find_if(old_config.begin(), old_config.end(),
 											  [old_mach](auto &config_elem) { return config_elem.first == old_mach; });
+		assert(old_slot_it != old_config.end());
 		const size_t old_slot = old_slot_it->second;
 
 		// determine 'optimal' slot on new_mach
