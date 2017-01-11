@@ -246,7 +246,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 
 		// TODO: How to handle jobs that need to run exclusively? (i.e.,
 		//       they already exceed the PER_MACHINE_TH)
-		// @jbreitbart, any ideas where to put this?
+		//       This should be done in find_swap_candidates.
 
 		// restart opposing VM
 		controller.thaw_opposing(job_id);
