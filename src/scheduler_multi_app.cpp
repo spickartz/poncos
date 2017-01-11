@@ -90,7 +90,7 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 	if (swap_candidates.empty()) {
 		return {};
 	}
-	assert(marked_machines.size() == swap_candidates.size());
+	assert(marked_machines.size() <= swap_candidates.size());
 
 	std::vector<size_t> marked_machines_sorted = sort_machines_by_membw_util(marked_machines, true);
 
@@ -265,9 +265,9 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 				controllerT::execute_config old_config = controller.id_to_config[job_id];
 				controllerT::execute_config new_config =
 					generate_new_config(old_config, marked_machines, swap_candidates);
-				assert(new_config.size() == old_config.size());
 
 				if (!new_config.empty()) {
+					assert(new_config.size() == old_config.size());
 					// we need to thaw the job to be able to trigger the S/R protocol
 					if (frozen) controller.thaw(job_id);
 
