@@ -2,17 +2,21 @@
 
 #include <fstream>
 
-jobT::jobT(size_t nprocs, std::string command) : nprocs(nprocs), command(std::move(command)) {}
+jobT::jobT(size_t nprocs, size_t threads_per_proc, std::string command)
+	: nprocs(nprocs), threads_per_proc(threads_per_proc), command(std::move(command)) {
+}
 
 YAML::Node jobT::emit() const {
 	YAML::Node node;
 	node["nprocs"] = nprocs;
+	node["threads-per-proc"] = threads_per_proc;
 	node["cmd"] = command;
 	return node;
 }
 
 void jobT::load(const YAML::Node &node) {
 	fast::load(nprocs, node["nprocs"]);
+	fast::load(threads_per_proc, node["threads-per-proc"]);
 	fast::load(command, node["cmd"]);
 }
 
@@ -36,10 +40,7 @@ YAML::Node job_queueT::emit() const {
 void job_queueT::load(const YAML::Node &node) { fast::load(jobs, node["job-list"]); }
 
 std::ostream &operator<<(std::ostream &os, const jobT &job) {
-	os << "mpiexec -np ";
-	os << job.nprocs;
-	os << " -hosts <host_list> ";
-	os << job.command;
+	os << job.emit();
 
 	return os;
 }

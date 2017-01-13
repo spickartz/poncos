@@ -24,9 +24,9 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 							 std::chrono::seconds wait_time) {
 	// for all commands
 	for (auto job : job_queue.jobs) {
-		assert(job.nprocs == controller.machines.size() * SLOT_SIZE);
+		assert(job.req_cpus() == controller.machines.size() * SLOT_SIZE);
 
-		controller.wait_for_ressource(job.nprocs);
+		controller.wait_for_ressource(job.req_cpus());
 
 		// search for a free slot and assign it to a new job
 		size_t new_slot = 0;
@@ -79,7 +79,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 				FASTLIB_LOG(scheduler_two_app_log, debug) << "0: freezing new";
 				controller.freeze(job_id);
 
-				controller.wait_for_ressource(job.nprocs);
+				controller.wait_for_ressource(job.req_cpus());
 
 				FASTLIB_LOG(scheduler_two_app_log, debug) << "0: thaw new";
 				controller.thaw(job_id);
