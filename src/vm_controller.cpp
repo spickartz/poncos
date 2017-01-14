@@ -90,7 +90,8 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 		fast::msg::migfra::Task_container m;
 		m.tasks.push_back(task);
 
-		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n" << m.to_string();
+		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n"
+											  << m.to_string();
 
 		comm->send_message(m.to_string(), topic);
 	}
@@ -111,7 +112,7 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 		// wait for VMs to be migrated
 		std::string topic = "fast/migfra/" + machines[src_host_idx] + "/result";
 		response.from_string(comm->get_message(topic));
-		assert(!response.results.front().status.compare("success"));
+		assert(response.results.front().status == "success");
 
 		// update slot allocations
 		std::swap(vm_locations[src_host_idx][src_slot], vm_locations[dest_host_idx][dest_slot]);
@@ -129,7 +130,8 @@ std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/,
 	// remove last ','
 	host_list.pop_back();
 
-	return "mpiexec -np " + std::to_string(job.nprocs) + " -genv OMP_NUM_THREADS " + std::to_string(job.threads_per_proc) + " -hosts " + host_list  + " " + job.command;
+	return "mpiexec -np " + std::to_string(job.nprocs) + " -genv OMP_NUM_THREADS " +
+		   std::to_string(job.threads_per_proc) + " -hosts " + host_list + " " + job.command;
 }
 
 // generates start task for a single VM
@@ -178,7 +180,8 @@ template <typename T> void vm_controller::suspend_resume_virt_cluster(const exec
 		fast::msg::migfra::Task_container m;
 		m.tasks.push_back(task);
 
-		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n" << m.to_string();
+		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n"
+											  << m.to_string();
 
 		comm->send_message(m.to_string(), topic);
 	}
@@ -190,10 +193,9 @@ template <typename T> void vm_controller::suspend_resume_virt_cluster(const exec
 		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/result";
 		response.from_string(comm->get_message(topic));
 
-		int status = response.results.front().status.compare("success");
-		if (status) {
-			assert(!response.results.front().details.compare(
-				"Error suspending domain: Requested operation is not valid: domain is not running"));
+		if (response.results.front().status != "success") {
+			assert(response.results.front().details !=
+				   "Error suspending domain: Requested operation is not valid: domain is not running");
 		}
 	}
 }
@@ -233,7 +235,7 @@ void vm_controller::start_all_VMs() {
 
 		// check success for each result
 		for (auto result : response.results) {
-			assert(!result.status.compare("success"));
+			assert(result.status == "success");
 		}
 	}
 }
@@ -251,7 +253,8 @@ void vm_controller::stop_all_VMs() {
 
 		// send stop request
 		std::string topic = "fast/migfra/" + mach + "/task";
-		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n" << m.to_string();
+		FASTLIB_LOG(vm_controller_log, debug) << "sending message \n topic: " << topic << "\n message:\n"
+											  << m.to_string();
 		comm->send_message(m.to_string(), topic);
 
 		mach_id++;
@@ -263,7 +266,7 @@ void vm_controller::stop_all_VMs() {
 		std::string topic = "fast/migfra/" + mach + "/result";
 		response.from_string(comm->get_message(topic));
 		for (auto result : response.results) {
-			assert(!result.status.compare("success"));
+			assert(result.status == "success");
 		}
 	}
 }

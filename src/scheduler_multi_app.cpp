@@ -42,14 +42,10 @@ std::vector<size_t> multi_app_sched::sort_machines_by_membw_util(const std::vect
 	std::vector<size_t> sorted_machine_idxs = machine_idxs;
 	std::sort(sorted_machine_idxs.begin(), sorted_machine_idxs.end(),
 			  [&total_membw_util, &reverse](size_t i1, size_t i2) {
-			  	  bool ret;
 				  if (reverse) {
-					  ret = total_membw_util[i1] > total_membw_util[i2];
-				  } else {
-					  ret = total_membw_util[i1] < total_membw_util[i2];
+					  return total_membw_util[i1] > total_membw_util[i2];
 				  }
-
-				  return ret;
+				  return total_membw_util[i1] < total_membw_util[i2];
 			  });
 
 	return sorted_machine_idxs;
@@ -134,7 +130,7 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 		} else {
 			new_slot_it = std::min_element(membw_util[new_mach].begin(), membw_util[new_mach].end());
 		}
-		const size_t new_slot = static_cast<size_t>(std::distance(membw_util[new_mach].begin(), new_slot_it));
+		const auto new_slot = static_cast<size_t>(std::distance(membw_util[new_mach].begin(), new_slot_it));
 		assert(membw_util[old_mach][(old_slot + 1) % SLOTS] + membw_util[new_mach][new_slot] < PER_MACHINE_TH);
 		assert(membw_util[new_mach][(new_slot + 1) % SLOTS] + membw_util[old_mach][old_slot] < PER_MACHINE_TH);
 
