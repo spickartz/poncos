@@ -6,16 +6,17 @@
 #include <iostream>
 #include <numeric>
 
+#include "poncos/controller.hpp"
 #include "poncos/cgroup_controller.hpp"
 #include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
 
 // inititalize fast-lib log
 FASTLIB_LOG_INIT(scheduler_multi_app_log, "multi-app scheduler")
-FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_multi_app_log, info);
+FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_multi_app_log, trace);
 
 // per machine threshold for the membw utilization
-constexpr double PER_MACHINE_TH = 0.9;
+constexpr double PER_MACHINE_TH = 0.8;
 
 double multi_app_sched::membw_util_of_node(const size_t &idx) const {
 	assert(idx < membw_util.size());
@@ -58,8 +59,10 @@ std::vector<size_t> multi_app_sched::check_membw(const controllerT::execute_conf
 		// get membw
 		double membw = 0.0;
 		for (size_t s = 0; s < SLOTS; ++s) {
+			FASTLIB_LOG(scheduler_multi_app_log, trace) << "membw_util[" << c.first << "][" << s << "] = " << membw_util[c.first][s];
 			membw += membw_util[c.first][s];
 		}
+		FASTLIB_LOG(scheduler_multi_app_log, trace) << "membw_util[c.first] = " << membw;
 
 		// 	membw ok?
 		// 		no -> mark it
@@ -90,6 +93,7 @@ void multi_app_sched::update_membw_util(const controllerT::execute_config &old_c
 controllerT::execute_config multi_app_sched::generate_new_config(const controllerT::execute_config &old_config,
 																 const std::vector<size_t> &marked_machines,
 																 const std::vector<size_t> &swap_candidates) const {
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "swap_candidates: " << swap_candidates;
 	// are there any swap candidates?
 	if (swap_candidates.empty()) {
 		return {};
@@ -168,15 +172,22 @@ std::vector<size_t> multi_app_sched::find_swap_candidates(const std::vector<size
 	// -> sorted list of machine indices in accordance with membw_util
 	std::vector<size_t> swap_candidates(membw_util.size());
 	std::iota(swap_candidates.begin(), swap_candidates.end(), 0);
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "Unsorted swap_candidates: " << swap_candidates;
 	swap_candidates = sort_machines_by_membw_util(swap_candidates, false);
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "Sorted swap_candidates  : " << swap_candidates;
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "Marked machines         : " << marked_machines;
 
 	// calculate current total membw_util for all marked machines and
 	// swap candidates
 	double total_membw_util = 0;
 	for (size_t idx = 0; idx < marked_machines.size(); ++idx) {
 		total_membw_util += membw_util_of_node(marked_machines[idx]);
+		FASTLIB_LOG(scheduler_multi_app_log, trace) << "membw_util_of_node(marked_machines[" << idx << "]) = " << membw_util_of_node(marked_machines[idx]);
 		total_membw_util += membw_util_of_node(swap_candidates[idx]);
+		FASTLIB_LOG(scheduler_multi_app_log, trace) << "membw_util_of_node(swap_candidates[" << idx << "]) = " << membw_util_of_node(swap_candidates[idx]);
 	}
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "total_membw_util = " << total_membw_util;
+	FASTLIB_LOG(scheduler_multi_app_log, trace) << "PER_MACHINE_TH * marked_machines.size() * 2 = " << PER_MACHINE_TH * marked_machines.size() * 2;
 
 	// are we able to find a new config?
 	// -> if the total sum of all membw_utils exceeds the some of all
@@ -267,17 +278,23 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			if (marked_machines.empty()) break;
 
 			if (controller.update_supported()) {
+				FASTLIB_LOG(scheduler_multi_app_log, trace) << "Searching swap_candidates ...";
 				const std::vector<size_t> swap_candidates = find_swap_candidates(marked_machines);
 				controllerT::execute_config old_config = controller.id_to_config[job_id];
+				FASTLIB_LOG(scheduler_multi_app_log, trace) << "Generating new_config ...";
 				controllerT::execute_config new_config =
 					generate_new_config(old_config, marked_machines, swap_candidates);
+				FASTLIB_LOG(scheduler_multi_app_log, trace) << "new_config: " << new_config;
 
 				if (!new_config.empty()) {
 					assert(new_config.size() == old_config.size());
 					// we need to thaw the job to be able to trigger the S/R protocol
+					FASTLIB_LOG(scheduler_multi_app_log, trace) << "Thaw job if necessary ...";
 					if (frozen) controller.thaw(job_id);
 
+					FASTLIB_LOG(scheduler_multi_app_log, trace) << "Update config ...";
 					controller.update_config(job_id, new_config);
+					FASTLIB_LOG(scheduler_multi_app_log, trace) << "Update membw_util ...";
 					update_membw_util(old_config, new_config);
 					break;
 				}

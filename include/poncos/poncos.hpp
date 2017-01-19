@@ -16,8 +16,10 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <sstream>
 
 #include <fast-lib/log.hpp>
+
 
 struct vm_pool_elemT {
 	std::string name;
@@ -38,5 +40,20 @@ extern const sched_configT co_configs[SLOTS];
 
 void read_file(const std::string& filename, std::vector<std::string> &command_queue);
 
-std::ostream &operator<<(std::ostream &os, const std::vector<size_t> &vec);
+
+template <template <typename,typename> class C, typename E, typename A>
+std::ostream &operator<<(std::ostream &os, C<E, A> &vec) {
+	os << "[";
+	std::stringstream vec_stream;
+	for (const auto &vec_elem : vec) {
+		vec_stream << vec_elem << ",";
+	}
+
+	std::string vec_str = vec_stream.str();
+	if (!vec_str.empty()) vec_str.pop_back();
+	os << vec_str;
+	os << "]";
+
+	return os;
+}
 #endif /* end of include guard: poncos_hpp */

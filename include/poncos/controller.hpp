@@ -17,9 +17,11 @@
 class controllerT {
   public:
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
-	using execute_config = std::vector<std::pair<size_t, size_t>>;
+	using execute_config_elemT = std::pair<size_t, size_t>;
+	using execute_config = std::vector<execute_config_elemT>;
 	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
-	using machine_usageT = std::vector<std::array<size_t, SLOTS>>;
+	using slot_allocationT = std::array<size_t, SLOTS>;
+	using machine_usageT = std::vector<slot_allocationT>;
 
   public:
 	controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename);
@@ -91,6 +93,7 @@ class controllerT {
 };
 
 
-std::ostream &operator<<(std::ostream &os, const controllerT::execute_config &config);
+std::ostream &operator<<(std::ostream &os, const controllerT::execute_config_elemT &config_elem);
+//std::ostream &operator<<(std::ostream &os, const controllerT::slot_allocationT &slot_allocation);
 
 #endif /* end of include guard: poncos_controller */

@@ -8,7 +8,7 @@
 
 // inititalize fast-lib log
 FASTLIB_LOG_INIT(controller_log, "controller")
-FASTLIB_LOG_SET_LEVEL_GLOBAL(controller_log, info);
+FASTLIB_LOG_SET_LEVEL_GLOBAL(controller_log, trace);
 
 controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename)
 	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
@@ -27,6 +27,7 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 
 	_machine_usage.assign(_machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
 																   std::numeric_limits<size_t>::max()}});
+	FASTLIB_LOG(controller_log, trace) << "machine_usage = " << machine_usage;
 
 	_available_slots = _machines.size();
 }
@@ -105,6 +106,8 @@ void controllerT::update_config(const size_t id, const execute_config &new_confi
 	execute_config &old_config = _id_to_config[id];
 	assert(new_config.size() == old_config.size());
 
+	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": machine_usage = " << machine_usage;
+	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": config        = " << old_config;
 	// update id_to_config for all affected jobs and machine_usage.
 	for (size_t i = 0; i < new_config.size(); ++i) {
 		auto &oc = old_config[i];
@@ -136,6 +139,8 @@ void controllerT::update_config(const size_t id, const execute_config &new_confi
 		}
 		assert(success);
 	}
+	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": machine_usage = " << machine_usage;
+	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": config        = " << old_config;
 
 	// "old" config should now be updated to the new config
 	assert(old_config == new_config);
@@ -151,6 +156,7 @@ size_t controllerT::execute(const jobT &job, const execute_config &config, std::
 		assert(machine_usage[i.first][i.second] == std::numeric_limits<size_t>::max());
 		_machine_usage[i.first][i.second] = cmd_counter;
 	}
+	FASTLIB_LOG(controller_log, trace) << "machine_usage = " << machine_usage;
 
 	const std::string command = generate_command(job, cmd_counter, config);
 	thread_pool.emplace_back(&controllerT::execute_command_internal, this, command, cmd_counter, config, callback);
@@ -171,31 +177,40 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 	assert(temp != -1);
 
 	// we are done
-	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration " << config[0].second;
+	const execute_config &cur_config = id_to_config[counter];
+	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration " << cur_config[0].second;
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 
-	for (const auto &i : config) {
+	FASTLIB_LOG(controller_log, trace) << "job #" << counter << ": machine_usage = " << machine_usage;
+	FASTLIB_LOG(controller_log, trace) << "job #" << counter << ": config        = " << id_to_config[counter];
+	for (const auto &i : cur_config) {
 		assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());
 		_machine_usage[i.first][i.second] = std::numeric_limits<size_t>::max();
 	}
+	FASTLIB_LOG(controller_log, trace) << "machine_usage = " << machine_usage;
 
-	callback(config[0].second);
+	callback(cur_config[0].second);
 	worker_counter_cv.notify_one();
 }
 
 std::string controllerT::cmd_name_from_id(size_t id) const { return std::string("poncos_") + std::to_string(id); }
 
-std::ostream &operator<<(std::ostream &os, const controllerT::execute_config &config) {
-	os << "[";
-	std::string configs;
-	for (const auto &config_elem : config) {
-		configs += "[" + std::to_string(config_elem.first) + "," +  std::to_string(config_elem.second) + "],";
-	}
-	if (!configs.empty())
-		configs.pop_back();
-	os << configs;
-	os << "]";
-
+std::ostream &operator<<(std::ostream &os, const controllerT::execute_config_elemT &config_elem) {
+	os << "[" << std::to_string(config_elem.first) << "," <<  std::to_string(config_elem.second) << "]";
 	return os;
 }
+//std::ostream &operator<<(std::ostream &os, const controllerT::slot_allocationT &slot_allocation) {
+//	os << "[";
+//	std::stringstream slot_stream;
+//	for (const auto &slot : slot_allocation) {
+//		slot_stream << slot << ",";
+//	}
+//
+//	std::string slot_str = slot_stream.str();
+//	if (!slot_str.empty()) slot_str.pop_back();
+//	os << slot_str;
+//	os << "]";
+//
+//	return os;
+//}
