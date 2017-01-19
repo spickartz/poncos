@@ -85,8 +85,11 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 		// generate migrate task and put into task container
 		std::string topic = "fast/migfra/" + src_host + "/task";
 		auto task =
-			std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", true, true, "auto", false);
-		task->swap_with = dest_guest;
+			std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", false, true, 0, false);
+		task->swap_with = fast::msg::migfra::Swap_with();
+		task->swap_with.get().vm_name = dest_guest;
+		task->swap_with.get().pscom_hook_procs = "0";
+
 		fast::msg::migfra::Task_container m;
 		m.tasks.push_back(task);
 
@@ -167,7 +170,10 @@ std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(siz
 	std::vector<fast::msg::migfra::PCI_id> pci_ids;
 	pci_ids.emplace_back(0x15b3, 0x1004);
 
-	return std::make_shared<fast::msg::migfra::Start>(slot_xml, pci_ids, true);
+	auto start_task = std::make_shared<fast::msg::migfra::Start>(slot_xml, pci_ids, true);
+	start_task->transient = true;
+
+	return start_task;
 }
 
 template <typename T> void vm_controller::suspend_resume_virt_cluster(const execute_config &config) {
@@ -247,7 +253,7 @@ void vm_controller::stop_all_VMs() {
 		// generate stop tasks
 		fast::msg::migfra::Task_container m;
 		for (size_t slot = 0; slot < SLOTS; ++slot) {
-			auto task = std::make_shared<fast::msg::migfra::Stop>(vm_locations[mach_id][slot], false, true, true);
+			auto task = std::make_shared<fast::msg::migfra::Stop>(vm_locations[mach_id][slot], false, false, true);
 			m.tasks.push_back(task);
 		}
 
