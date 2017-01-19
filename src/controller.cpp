@@ -105,7 +105,6 @@ controllerT::execute_config controllerT::generate_opposing_config(const size_t i
 void controllerT::update_config(const size_t id, const execute_config &new_config) {
 	execute_config &old_config = _id_to_config[id];
 	assert(new_config.size() == old_config.size());
-
 	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": machine_usage = " << machine_usage;
 	FASTLIB_LOG(controller_log, trace) << "job #" << id << ": config        = " << old_config;
 	// update id_to_config for all affected jobs and machine_usage.
@@ -178,7 +177,8 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 
 	// we are done
 	const execute_config &cur_config = id_to_config[counter];
-	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration " << cur_config[0].second;
+	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration "
+									  << cur_config[0].second;
 
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 
@@ -195,22 +195,3 @@ void controllerT::execute_command_internal(std::string command, size_t counter, 
 }
 
 std::string controllerT::cmd_name_from_id(size_t id) const { return std::string("poncos_") + std::to_string(id); }
-
-std::ostream &operator<<(std::ostream &os, const controllerT::execute_config_elemT &config_elem) {
-	os << "[" << std::to_string(config_elem.first) << "," <<  std::to_string(config_elem.second) << "]";
-	return os;
-}
-//std::ostream &operator<<(std::ostream &os, const controllerT::slot_allocationT &slot_allocation) {
-//	os << "[";
-//	std::stringstream slot_stream;
-//	for (const auto &slot : slot_allocation) {
-//		slot_stream << slot << ",";
-//	}
-//
-//	std::string slot_str = slot_stream.str();
-//	if (!slot_str.empty()) slot_str.pop_back();
-//	os << slot_str;
-//	os << "]";
-//
-//	return os;
-//}
