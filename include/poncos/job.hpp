@@ -9,7 +9,7 @@ struct jobT : public fast::Serializable {
 
 	YAML::Node emit() const override;
 	void load(const YAML::Node &node) override;
-	size_t req_cpus(void){return nprocs * threads_per_proc;};
+	size_t req_cpus(void) { return nprocs * threads_per_proc; };
 
 	size_t nprocs;
 	size_t threads_per_proc;
