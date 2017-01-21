@@ -1,4 +1,4 @@
-#include "poncos/vm_controller.hpp"
+#include "poncos/controller_vm.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -84,8 +84,7 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 
 		// generate migrate task and put into task container
 		std::string topic = "fast/migfra/" + src_host + "/task";
-		auto task =
-			std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", false, true, 0, false);
+		auto task = std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", false, true, 0, false);
 		task->swap_with = fast::msg::migfra::Swap_with();
 		task->swap_with.get().vm_name = dest_guest;
 		task->swap_with.get().pscom_hook_procs = "0";

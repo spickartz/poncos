@@ -8,8 +8,8 @@
  * Some rights reserved. See LICENSE
  */
 
-#ifndef poncos_cgroup_controller
-#define poncos_cgroup_controller
+#ifndef poncos_controller_cgroup
+#define poncos_controller_cgroup
 
 #include <memory>
 #include <string>
@@ -44,9 +44,9 @@ class cgroup_controller : public controllerT {
   private:
 	std::string generate_command(const jobT &job, size_t counter, const execute_config &config) const;
 
-	template <typename messageT> void send_message(const execute_config &config, const std::string& topic_adn) const;
+	template <typename messageT> void send_message(const execute_config &config, const std::string &topic_adn) const;
 
   private:
 };
 
-#endif /* end of include guard: poncos_cgroup_controller */
+#endif /* end of include guard: poncos_controller_cgroup */

@@ -6,7 +6,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "poncos/cgroup_controller.hpp"
+#include "poncos/controller.hpp"
 #include "poncos/job.hpp"
 #include "poncos/poncos.hpp"
 

@@ -8,8 +8,8 @@
  * Some rights reserved. See LICENSE
  */
 
-#ifndef poncos_vm_controller
-#define poncos_vm_controller
+#ifndef poncos_controller_vm
+#define poncos_controller_vm
 
 #include <memory>
 #include <string>
@@ -67,4 +67,4 @@ class vm_controller : public controllerT {
 	std::vector<std::array<std::string, SLOTS>> vm_locations;
 };
 
-#endif /* end of include guard: poncos_vm_controller */
+#endif /* end of include guard: poncos_controller_vm */

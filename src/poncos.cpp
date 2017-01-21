@@ -12,13 +12,13 @@
 #include <iomanip>
 #include <iostream>
 
-#include "poncos/cgroup_controller.hpp"
+#include "poncos/controller_cgroup.hpp"
+#include "poncos/controller_vm.hpp"
 #include "poncos/poncos.hpp"
 #include "poncos/scheduler.hpp"
 #include "poncos/scheduler_multi_app.hpp"
 #include "poncos/scheduler_multi_app_consec.hpp"
 #include "poncos/scheduler_two_app.hpp"
-#include "poncos/vm_controller.hpp"
 
 #include <fast-lib/message/migfra/time_measurement.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
