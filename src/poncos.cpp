@@ -122,6 +122,7 @@ static void parse_options(size_t argc, const char **argv) {
 			continue;
 		}
 		if (arg == "--multi-sched-consec") {
+			// TODO maybe introduce a --exclusive option instead
 			use_multi_sched_consec = true;
 			continue;
 		}
