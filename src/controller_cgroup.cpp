@@ -88,7 +88,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		++hosts_per_slot[p.second];
 	}
 
-	assert(job.nprocs == std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)));
+	assert(job.req_cpus() ==
+		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * SLOT_SIZE);
 
 	std::string commands[SLOTS];
 	for (size_t slot = 0; slot < SLOTS; ++slot) {
