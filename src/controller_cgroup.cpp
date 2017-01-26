@@ -79,26 +79,33 @@ void cgroup_controller::send_message(const controllerT::execute_config &config, 
 void cgroup_controller::update_config(const size_t /*id*/, const execute_config & /*new_config*/) { assert(false); }
 
 std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
-	std::string host_lists[SLOTS];
-	size_t hosts_per_slot[SLOTS];
+	// index 0 == SLOT 0; index 1 == SLOT 1; index SLOTS == all slots on the same system are used
+	std::string host_lists[SLOTS + 1];
+	size_t hosts_per_slot[SLOTS + 1];
+	std::string commands[SLOTS + 1];
+
 	for (unsigned long &s : hosts_per_slot) s = 0;
 
-	for (std::pair<size_t, size_t> p : config) {
-		host_lists[p.second] += machines[p.first] + ",";
-		++hosts_per_slot[p.second];
+	// TODO sort config by p.first
+
+	for (size_t i = 0; i < config.size(); ++i) {
+		// both slots of a system used?
+		if (i + 1 < config.size() && config[i].first == config[i + 1].first) {
+			++i;
+			host_lists[SLOTS] += machines[config[i].first] + "," + machines[config[i].first];
+			hosts_per_slot[SLOTS] += 2;
+			continue;
+		}
+		host_lists[config[i].second] += machines[config[i].first] + ",";
+		++hosts_per_slot[config[i].second];
 	}
 
 	assert(job.req_cpus() ==
 		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * SLOT_SIZE);
 
-	std::string commands[SLOTS];
 	for (size_t slot = 0; slot < SLOTS; ++slot) {
-		std::string &list = host_lists[slot];
-		// skip if host list is empty
 		if (hosts_per_slot[slot] == 0) continue;
 
-		// remove last ','
-		list.pop_back();
 		std::string command = " ./cgroup_wrapper.sh ";
 		command += cmd_name_from_id(counter) + " ";
 
@@ -121,17 +128,51 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		commands[slot] = command;
 	}
 
-	// a colon must be added between slots
-	bool add_colon = false;
+	// some dedicated nodes
+	if (hosts_per_slot[SLOTS] != 0) {
+		std::string command = " ./cgroup_wrapper.sh ";
+		command += cmd_name_from_id(counter) + " ";
+
+		// cgroup CPUs and memory is set by the bash script
+		for (int slot = 0; slot < SLOTS; ++slot) {
+			for (int i : co_configs[slot].cpus) {
+				command += std::to_string(i) + ",";
+			}
+		}
+		// remove last ','
+		command.pop_back();
+
+		command += " ";
+
+		for (int slot = 0; slot < SLOTS; ++slot) {
+			for (int i : co_configs[slot].mems) {
+				command += std::to_string(i) + ",";
+			}
+		}
+		// remove last ','
+		command.pop_back();
+
+		command += job.command;
+		commands[SLOTS] = command;
+	}
+
+	// TODO create hostfile
+	// filename should be something like cmd_name_from_id(counter)
+	// content:
 
 	// TODO: add thread_per_procs to command string for the support of multi-threaded applications
+	//       need to change -np
 	std::string ret = "mpiexec ";
-	for (size_t slot = 0; slot < SLOTS; ++slot) {
+	ret += "-f "; // TODO hostfilename
+
+	// a colon must be added between slots
+	bool add_colon = false;
+	for (size_t slot = 0; slot < SLOTS + 1; ++slot) {
 		if (hosts_per_slot[slot] == 0) continue;
 
 		if (add_colon) ret += " : ";
 
-		ret += "-np " + std::to_string(hosts_per_slot[slot]) + " -hosts " + host_lists[slot] + commands[slot];
+		ret += "-np " + std::to_string(hosts_per_slot[slot]) + " " + commands[slot];
 		add_colon = true;
 	}
 
