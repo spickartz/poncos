@@ -1,5 +1,6 @@
 #include "poncos/controller_cgroup.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <condition_variable>
 #include <iostream>
@@ -78,6 +79,13 @@ void cgroup_controller::send_message(const controllerT::execute_config &config, 
 
 void cgroup_controller::update_config(const size_t /*id*/, const execute_config & /*new_config*/) { assert(false); }
 
+controllerT::execute_config cgroup_controller::sort_config_by_hostname(const execute_config &config) const {
+	execute_config sorted_config = config;
+	std::sort(sorted_config.begin(), sorted_config.end(),
+			  [](const auto &elem_a, const auto &elem_b) { return elem_a.first < elem_b.first; });
+	return sorted_config;
+}
+
 std::string cgroup_controller::generate_command(const jobT &job, size_t counter, const execute_config &config) const {
 	// index 0 == SLOT 0; index 1 == SLOT 1; index SLOTS == all slots on the same system are used
 	std::string host_lists[SLOTS + 1];
@@ -86,7 +94,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 	for (unsigned long &s : hosts_per_slot) s = 0;
 
-	// TODO sort config by p.first
+	execute_config sorted_config = sort_config_by_hostname(config);
 
 	for (size_t i = 0; i < config.size(); ++i) {
 		// both slots of a system used?
