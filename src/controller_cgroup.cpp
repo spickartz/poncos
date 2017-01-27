@@ -184,7 +184,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	hosts_file.close();
 
 	std::string ret = "mpiexec ";
-	ret += "-f " + hosts_filename + " ";
+	ret += "-f " + hosts_filename + " -genv OMP_NUM_THREADS " + std::to_string(job.threads_per_proc);
 
 	// a colon must be added between slots
 	bool add_colon = false;
@@ -193,8 +193,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 		if (add_colon) ret += " : ";
 
-		ret += "-np " + std::to_string(job.nprocs) + " -genv OMP_NUM_THREADS " + std::to_string(job.threads_per_proc) +
-			   " " + commands[slot];
+		ret += " -np " + std::to_string(job.nprocs) + " " + commands[slot];
 		add_colon = true;
 	}
 	return ret;
