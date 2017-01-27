@@ -134,7 +134,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		command += cmd_name_from_id(counter) + " ";
 
 		// cgroup CPUs and memory is set by the bash script
-		for (int slot = 0; slot < SLOTS; ++slot) {
+		for (size_t slot = 0; slot < SLOTS; ++slot) {
 			for (int i : co_configs[slot].cpus) {
 				command += std::to_string(i) + ",";
 			}
@@ -144,7 +144,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 		command += " ";
 
-		for (int slot = 0; slot < SLOTS; ++slot) {
+		for (size_t slot = 0; slot < SLOTS; ++slot) {
 			for (int i : co_configs[slot].mems) {
 				command += std::to_string(i) + ",";
 			}
