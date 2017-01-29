@@ -12,7 +12,8 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(controller_log, info);
 
 controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename)
 	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
-	  id_to_config(_id_to_config), id_to_job(_id_to_job), cmd_counter(0), work_counter_lock(worker_counter_mutex), comm(std::move(_comm)), timestamps(true, "timestamps") {
+	  id_to_config(_id_to_config), id_to_job(_id_to_job), cmd_counter(0), work_counter_lock(worker_counter_mutex),
+	  comm(std::move(_comm)), timestamps(true, "timestamps") {
 
 	// fill the machine file
 	FASTLIB_LOG(controller_log, info) << "Reading machine file " << machine_filename << " ...";
@@ -37,7 +38,6 @@ controllerT::~controllerT() {
 		if (t.joinable()) t.join();
 	}
 	thread_pool.resize(0);
-
 
 	FASTLIB_LOG(controller_log, info) << "Controller timestamps:";
 	FASTLIB_LOG(controller_log, info) << "==========================";
@@ -173,6 +173,8 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	command += cmd_name + ".log";
 	command += " 2>&1 ";
 
+	FASTLIB_LOG(controller_log, info) << "Executing command: " << command;
+
 	timestamps.tick("job-#" + std::to_string(counter));
 	auto temp = system(command.c_str());
 	timestamps.tock("job-#" + std::to_string(counter));
@@ -181,7 +183,8 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	// we are done
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 	controllerT::execute_config cur_config = id_to_config[counter];
-	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration " << cur_config[0].second;
+	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration "
+									  << cur_config[0].second;
 
 	for (const auto &i : cur_config) {
 		assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());

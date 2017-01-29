@@ -1,5 +1,7 @@
 #include "poncos/poncos.hpp"
 
+// We currently assume the slots have identical size!
+
 // This defines the slots used fot scheduling.
 // Currently there is a fixed number of two slots.
 const sched_configT co_configs[SLOTS] = {

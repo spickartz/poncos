@@ -176,9 +176,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	std::ofstream hosts_file(hosts_filename);
 	assert(hosts_file.is_open());
 
-	size_t total_number_of_slots = std::accumulate(std::cbegin(hosts_per_slot), std::cend(hosts_per_slot), 0);
-	size_t process_per_slot = total_number_of_slots / job.threads_per_proc;
-	assert(process_per_slot * job.threads_per_proc == total_number_of_slots * co_configs[0].cpus.size());
+	size_t process_per_slot = SLOT_SIZE / job.threads_per_proc;
+	assert(SLOT_SIZE % job.threads_per_proc == 0);
 
 	for (size_t i = 0; i <= SLOTS; ++i) {
 		if (hosts_per_slot[i] == 0) continue;
@@ -201,7 +200,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 		if (add_colon) ret += " : ";
 
-		ret += " -np " + std::to_string(hosts_per_slot[slot]) + " " + commands[slot];
+		ret += " -np " + std::to_string(process_per_slot * hosts_per_slot[slot]) + " " + commands[slot];
 		add_colon = true;
 	}
 	return ret;

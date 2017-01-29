@@ -18,7 +18,7 @@ echo "$HOSTNAME: starting ${@:4}"
 ${@:4}
 
 echo "$HOSTNAME: writing $$ to /sys/fs/cgroup/tasks"
-echo $$ > /sys/fs/cgroup/tasks
+echo $$ > /sys/fs/cgroup/cpuset/tasks
 
 echo "$HOSTNAME: deleting cgroup $CGROUP"
 # ignore error
