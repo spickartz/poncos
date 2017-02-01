@@ -89,7 +89,7 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 
 		// generate migrate task
 		std::string topic = "fast/migfra/" + src_host + "/task";
-		auto task = std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", false, true, 0, false);
+		auto task = std::make_shared<fast::msg::migfra::Migrate>(src_guest, dest_host, "warm", true, true, 0, false);
 		task->swap_with = fast::msg::migfra::Swap_with();
 		task->swap_with->vm_name = dest_guest;
 		if (src_slot != dest_slot) {
