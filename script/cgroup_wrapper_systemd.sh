@@ -22,6 +22,10 @@ echo $$ > $FREEZER/tasks
 echo "$HOSTNAME: starting ${@:4}"
 ${@:4}
 
+# move bash to the top level cgroup
+echo $$ > /sys/fs/cgroup/cpuset/tasks
+echo $$ > /sys/fs/cgroup/freezer/tasks
+
 # ignore error TODO: we need a post hook deleting the cgroups
 rmdir $CGROUP || true
 rmdir $FREEZER || true
