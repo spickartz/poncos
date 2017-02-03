@@ -58,6 +58,9 @@ static void parse_options(size_t argc, const char **argv) {
 		print_help(argv[0]);
 	}
 
+	bool wait_set = false;
+	bool consec_set = false;
+
 	for (size_t i = 1; i < argc; ++i) {
 		std::string arg(argv[i]);
 
@@ -114,6 +117,7 @@ static void parse_options(size_t argc, const char **argv) {
 			}
 			wait_time = std::chrono::seconds(std::stoul(std::string(argv[i + 1])));
 			++i;
+			wait_set = true;
 			continue;
 		}
 
@@ -124,6 +128,7 @@ static void parse_options(size_t argc, const char **argv) {
 		if (arg == "--multi-sched-consec") {
 			// TODO maybe introduce a --exclusive option instead
 			use_multi_sched_consec = true;
+			consec_set = true;
 			continue;
 		}
 	}
@@ -131,6 +136,10 @@ static void parse_options(size_t argc, const char **argv) {
 	if (use_multi_sched_consec && use_multi_sched) print_help(argv[0]);
 	if (queue_filename == "" || machine_filename == "") print_help(argv[0]);
 	if (use_vms && slot_path == "") print_help(argv[0]);
+
+	if (wait_set && consec_set) {
+		std::cout << "multi-sched-consec selected. Ignoring wait argument." << std::endl;
+	}
 }
 
 int main(int argc, char const *argv[]) {
