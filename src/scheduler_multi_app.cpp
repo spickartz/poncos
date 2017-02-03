@@ -204,7 +204,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 	membw_util.resize(controller.machines.size(), std::array<double, 2>{{0.0, 0.0}});
 
 	// for all commands
-	for (auto job : job_queue.jobs) {
+	for (const auto &job : job_queue.jobs) {
 		assert(job.req_cpus() <= controller.machines.size() * SLOT_SIZE);
 		controller.wait_for_ressource(job.req_cpus(), 1);
 

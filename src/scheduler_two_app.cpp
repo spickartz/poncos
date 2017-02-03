@@ -23,7 +23,7 @@ void two_app_sched::command_done(const size_t config, controllerT & /*controller
 void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
 							 std::chrono::seconds wait_time) {
 	// for all commands
-	for (auto job : job_queue.jobs) {
+	for (const auto &job : job_queue.jobs) {
 		assert(job.req_cpus() == controller.machines.size() * SLOT_SIZE);
 
 		controller.wait_for_ressource(job.req_cpus(), 1);
@@ -44,7 +44,8 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 				job_id =
 					controller.execute(job, config, [&](const size_t config) { command_done(config, controller); });
 
-				FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t starting '" << job << "' at configuration " << new_slot;
+				FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t starting '" << job << "' at configuration "
+														 << new_slot;
 
 				break;
 			}
@@ -65,14 +66,15 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 		auto temp = run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
 		co_config_distgend[new_slot] = *std::max_element(temp.begin(), temp.end());
 
-		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Result for command '" << job << "' is: " << 1 - co_config_distgend[new_slot];
+		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Result for command '" << job
+												 << "' is: " << 1 - co_config_distgend[new_slot];
 
 		if (co_config_in_use[0] && co_config_in_use[1]) {
 			FASTLIB_LOG(scheduler_two_app_log, debug) << "0: thaw old";
 			controller.thaw_opposing(job_id);
 
 			FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Estimating total usage of "
-					  << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
+													 << (1 - co_config_distgend[0]) + (1 - co_config_distgend[1]);
 
 			if ((1 - co_config_distgend[0]) + (1 - co_config_distgend[1]) > 0.9) {
 				FASTLIB_LOG(scheduler_two_app_log, info) << " -> we will run one";
