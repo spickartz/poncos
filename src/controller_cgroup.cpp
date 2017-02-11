@@ -35,6 +35,7 @@ cgroup_controller::~cgroup_controller() = default;
 void cgroup_controller::freeze(const size_t id) {
 	assert(id < id_to_config.size());
 
+	timestamps.tick("freeze-job-#" + std::to_string(id));
 	const execute_config &config = id_to_config[id];
 
 	send_message<fast::msg::agent::mmbwmon::stop>(config, "/mmbwmon/stop");
@@ -46,6 +47,7 @@ void cgroup_controller::thaw(const size_t id) {
 	const execute_config &config = id_to_config[id];
 
 	send_message<fast::msg::agent::mmbwmon::restart>(config, "/mmbwmon/restart");
+	timestamps.tock("freeze-job-#" + std::to_string(id));
 }
 
 void cgroup_controller::freeze_opposing(const size_t id) {

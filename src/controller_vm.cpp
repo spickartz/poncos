@@ -37,6 +37,8 @@ void vm_controller::dismantle() { stop_all_VMs(); }
 void vm_controller::freeze(const size_t id) {
 	assert(id < id_to_config.size());
 
+	timestamps.tick("freeze-job-#" + std::to_string(id));
+
 	const execute_config &config = id_to_config[id];
 	suspend_resume_virt_cluster<fast::msg::migfra::Suspend>(config);
 }
@@ -46,6 +48,8 @@ void vm_controller::thaw(const size_t id) {
 
 	const execute_config &config = id_to_config[id];
 	suspend_resume_virt_cluster<fast::msg::migfra::Resume>(config);
+
+	timestamps.tock("freeze-job-#" + std::to_string(id));
 }
 
 void vm_controller::freeze_opposing(const size_t id) {
