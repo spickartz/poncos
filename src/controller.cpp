@@ -69,11 +69,13 @@ void controllerT::wait_for_ressource(const size_t requested, const size_t slots_
 			size_t allocated_slots = 0;
 			for (size_t s = 0; s < SLOTS; ++s) {
 				if (i[s] == std::numeric_limits<size_t>::max()) {
-					counter += SLOT_SIZE;
 					++allocated_slots;
 
 					if (allocated_slots == slots_per_host) break;
 				}
+			}
+			if (allocated_slots == slots_per_host) {
+				counter += SLOT_SIZE * slots_per_host;
 			}
 		}
 
