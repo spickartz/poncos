@@ -316,7 +316,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 
 			if (!frozen) {
 				controller.freeze(job_id);
-				FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t froze job #: '" << std::to_string(job_id)
+				FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t froze job #" << std::to_string(job_id)
 														   << " because some machines exceeded the threshhold.";
 				frozen = true;
 			}
