@@ -183,8 +183,7 @@ std::string vm_controller::generate_command(const jobT &job, size_t /*counter*/,
 // generates start task for a single VM
 std::shared_ptr<fast::msg::migfra::Start> vm_controller::generate_start_task(size_t slot, vm_pool_elemT &free_vm) {
 	// load XML
-	std::fstream slot_file;
-	slot_file.open(slot_path + "/slot-" + std::to_string(slot) + ".xml");
+	std::fstream slot_file(slot_path + "/slot-" + std::to_string(slot) + ".xml", std::fstream::in);
 	std::stringstream slot_stream;
 	slot_stream << slot_file.rdbuf();
 	std::string slot_xml = slot_stream.str();

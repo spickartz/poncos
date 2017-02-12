@@ -25,7 +25,7 @@ static inline std::string &rtrim(std::string &s) {
 static inline std::string &trim(std::string &s) { return ltrim(rtrim(s)); }
 
 void read_file(const std::string& filename, std::vector<std::string> &command_queue) {
-	std::ifstream file(filename);
+	std::ifstream file(filename, std::fstream::in);
 	assert(file.good());
 	std::string command;
 	while (std::getline(file, command)) {
