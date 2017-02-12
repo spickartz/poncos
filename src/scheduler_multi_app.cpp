@@ -324,7 +324,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 														   << " because some machines exceeded the threshhold.";
 				frozen = true;
 
-				if (controller.update_supported()) {
+				if (!controller.update_supported()) {
 					// ok, we had to freeze the current job and we cannot move it anywhere else
 					// we will start a thread for the whole purpose of waiting until the threshold
 					// on these machines is fine again and thaw the job
