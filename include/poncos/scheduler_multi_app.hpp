@@ -3,6 +3,8 @@
 
 #include "poncos/scheduler.hpp"
 
+#include <thread>
+
 struct multi_app_sched : public schedulerT {
 
 	virtual void schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
@@ -20,6 +22,7 @@ struct multi_app_sched : public schedulerT {
 
 	double membw_util_of_node(const size_t &idx) const;
 	std::vector<std::array<double, SLOTS>> membw_util;
+	std::vector<std::thread> thread_pool;
 };
 
 #endif /* end of include guard: scheduler_multi_hpp */

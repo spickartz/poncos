@@ -232,7 +232,8 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 		assert(config.size() * SLOT_SIZE == job.req_cpus());
 
 		// start job
-		auto job_id = controller.execute(job, config, [&](const size_t config) { command_done(config, controller); });
+		auto job_id = controller.execute(
+			job, config, [&controller, this](const size_t config) { command_done(config, controller); });
 		FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t starting '" << job;
 
 		// for the initialization phase of the application to be completed
@@ -260,7 +261,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			}
 			avg_membw /= distgen_res.size();
 
-			FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t job-#: '" << std::to_string(job_id)
+			FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t job-#" << std::to_string(job_id)
 													   << " has an average membw util of " << std::to_string(avg_membw);
 			std::string str;
 
@@ -295,7 +296,10 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			const auto marked_machines = check_membw(config);
 
 			// everything fine?
-			if (marked_machines.empty()) break;
+			if (marked_machines.empty()) {
+				if (frozen) controller.thaw(job_id);
+				break;
+			}
 
 			if (controller.update_supported()) {
 				const std::vector<size_t> swap_candidates = find_swap_candidates(marked_machines);
@@ -319,10 +323,42 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 				FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t froze job #" << std::to_string(job_id)
 														   << " because some machines exceeded the threshhold.";
 				frozen = true;
+
+				if (controller.update_supported()) {
+					// ok, we had to freeze the current job and we cannot move it anywhere else
+					// we will start a thread for the whole purpose of waiting until the threshold
+					// on these machines is fine again and thaw the job
+					// TODO this has a big overlapp with the outer loop and is way to long for a lambda.
+					//      cleanup!!!
+					thread_pool.emplace_back(
+						[&controller, this, config](size_t job_id) {
+							while (true) {
+								controller.wait_for_change();
+								const auto marked_machines = check_membw(config);
+
+								// check if any nodes the job is using are part of marked_machines
+								bool ok = true;
+								for (size_t i = 0; i < marked_machines.size(); ++i) {
+									for (size_t j = 0; j < config.size(); ++j) {
+										if (config[j].first == marked_machines[i]) {
+											ok = false;
+											break;
+										}
+									}
+									if (!ok) break;
+								}
+
+								if (ok) break;
+							}
+							controller.thaw(job_id);
+						},
+						job_id);
+					thread_pool[thread_pool.size() - 1].detach();
+					break;
+				}
 			}
 			controller.wait_for_change();
 		}
-		if (frozen) controller.thaw(job_id);
 	}
 
 	controller.done();
