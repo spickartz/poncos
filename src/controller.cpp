@@ -197,7 +197,7 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	}
 
 	callback(counter);
-	worker_counter_cv.notify_one();
+	worker_counter_cv.notify_all();
 }
 
 std::string controllerT::cmd_name_from_id(size_t id) const { return std::string("poncos_") + std::to_string(id); }
