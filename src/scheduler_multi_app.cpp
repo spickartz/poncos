@@ -15,6 +15,7 @@ FASTLIB_LOG_INIT(scheduler_multi_app_log, "multi-app scheduler")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_multi_app_log, info);
 
 // per machine threshold for the membw utilization
+// TODO make it controllable via command line parameter
 constexpr double PER_MACHINE_TH = 0.9;
 
 double multi_app_sched::membw_util_of_node(const size_t &idx) const {
@@ -52,6 +53,7 @@ std::vector<size_t> multi_app_sched::sort_machines_by_membw_util(const std::vect
 	return sorted_machine_idxs;
 }
 
+// TODO move to base class
 std::vector<size_t> multi_app_sched::check_membw(const controllerT::execute_config &config) const {
 	std::vector<size_t> marked_machines;
 	for (const auto &c : config) {
@@ -250,6 +252,35 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			membw_util[c.first][c.second] = 1 - distgen_res[i];
 		}
 
+		{
+			// TODO move to function
+			double avg_membw = 0;
+			for (size_t i = 0; i < distgen_res.size(); ++i) {
+				avg_membw += 1 - distgen_res[i];
+			}
+			avg_membw /= distgen_res.size();
+
+			FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t job-#: '" << std::to_string(job_id)
+													   << " has an average membw util of " << std::to_string(avg_membw);
+			std::string str;
+
+			for (size_t i = 0; i < membw_util.size(); ++i) {
+				str += "(";
+				double sum = 0;
+				for (size_t s = 0; s < SLOTS; ++s) {
+					str += std::to_string(membw_util[i][s]);
+					if (s != SLOTS - 1) str += " + ";
+					sum += membw_util[i][s];
+				}
+				str += " = ";
+				str += std::to_string(sum);
+				str += ")";
+				if (i != membw_util.size() - 1) str += ", ";
+			}
+
+			FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t membw-util: '" << str;
+		}
+
 		// TODO: How to handle jobs that need to run exclusively? (i.e.,
 		//       they already exceed the PER_MACHINE_TH)
 		//       This should be done in find_swap_candidates.
@@ -285,6 +316,8 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 
 			if (!frozen) {
 				controller.freeze(job_id);
+				FASTLIB_LOG(scheduler_multi_app_log, info) << ">> \t froze job #: '" << std::to_string(job_id)
+														   << "because some machines exceeded the threshhold.";
 				frozen = true;
 			}
 			controller.wait_for_change();
