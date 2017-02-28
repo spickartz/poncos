@@ -35,7 +35,7 @@ void cgroup_controller::create_domain(const size_t id) {
 	memnode_map.emplace_back(mem_nodes);
 	std::vector<std::vector<unsigned int>> cpu_map;
 	cpu_map.reserve(1);
-	std::vector<unsigned int> cpu_list(co_configs[slot].mems.begin(), co_configs[slot].cpus.end());
+	std::vector<unsigned int> cpu_list(co_configs[slot].cpus.begin(), co_configs[slot].cpus.end());
 	cpu_map.emplace_back(cpu_list);
 
 	// generate start tasks

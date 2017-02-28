@@ -23,6 +23,12 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 	FASTLIB_LOG(controller_log, info) << "==============";
 	for (const std::string &c : _machines) {
 		FASTLIB_LOG(controller_log, info) << c;
+
+		std::string topic = "fast/migfra/" + c + "/task";
+		comm->add_subscription(topic);
+
+		topic = "fast/migfra/" + c + "/result";
+		comm->add_subscription(topic);
 	}
 	FASTLIB_LOG(controller_log, info) << "==============";
 
@@ -30,6 +36,7 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 																   std::numeric_limits<size_t>::max()}});
 
 	_available_slots = _machines.size();
+
 }
 
 controllerT::~controllerT() {
