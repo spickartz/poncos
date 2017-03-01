@@ -36,7 +36,6 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 																   std::numeric_limits<size_t>::max()}});
 
 	_available_slots = _machines.size();
-
 }
 
 controllerT::~controllerT() {
@@ -142,6 +141,7 @@ controllerT::execute_config controllerT::generate_opposing_config(const size_t i
 
 	for (auto const &config_elem : config) {
 		// TODO: what abour more than two slots per host?
+
 		opposing_config.emplace_back(config_elem.first, (config_elem.second + 1) % SLOTS);
 	}
 
@@ -228,7 +228,6 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	// we are done
 	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
 
-
 	// cleanup
 	delete_domain(counter);
 
@@ -250,6 +249,9 @@ std::string controllerT::cmd_name_from_id(size_t id) const { return std::string(
 template <typename T> void controllerT::suspend_resume_config(const execute_config &config) {
 	// request OP
 	for (auto config_elem : config) {
+		// anything running or is it empty?
+		if (machine_usage[config_elem.first][config_elem.second] == std::numeric_limits<size_t>::max()) continue;
+
 		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/task";
 
 		auto task = std::make_shared<T>(domain_name_from_config_elem(config_elem), true);
@@ -263,6 +265,9 @@ template <typename T> void controllerT::suspend_resume_config(const execute_conf
 	// wait for results
 	fast::msg::migfra::Result_container response;
 	for (auto config_elem : config) {
+		// anything running or is it empty?
+		if (machine_usage[config_elem.first][config_elem.second] == std::numeric_limits<size_t>::max()) continue;
+
 		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/result";
 		response.from_string(comm->get_message(topic));
 
