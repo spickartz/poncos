@@ -57,6 +57,9 @@ class controllerT {
 	void wait_for_completion_of(const size_t);
 	void done();
 
+	// unlock the controller, should typically not called by hand
+	void unlock();
+
 	execute_config generate_opposing_config(const size_t id) const;
 
 	// getters
@@ -86,6 +89,7 @@ class controllerT {
 	size_t cmd_counter;
 
 	// lock/cond variable used to wait for a job to be completed
+	// TODO rename the variables, lock the whole controller
 	std::mutex worker_counter_mutex;
 	std::condition_variable worker_counter_cv;
 	std::unique_lock<std::mutex> work_counter_lock;
@@ -110,6 +114,7 @@ class controllerT {
 	machine_usageT _machine_usage;
 	std::vector<execute_config> _id_to_config;
 	std::vector<jobT> _id_to_job;
+	bool _done_called;
 };
 
 std::ostream &operator<<(std::ostream &os, const controllerT::execute_config_elemT &config_elem);

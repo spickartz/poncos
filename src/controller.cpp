@@ -13,7 +13,7 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(controller_log, info);
 controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename)
 	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
 	  id_to_config(_id_to_config), id_to_job(_id_to_job), cmd_counter(0), work_counter_lock(worker_counter_mutex),
-	  comm(std::move(_comm)), timestamps(true, "timestamps") {
+	  comm(std::move(_comm)), timestamps(true, "timestamps"), _done_called(false) {
 
 	// fill the machine file
 	FASTLIB_LOG(controller_log, info) << "Reading machine file " << machine_filename << " ...";
@@ -39,7 +39,7 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 }
 
 controllerT::~controllerT() {
-	done();
+	assert(_done_called);
 	for (auto &t : thread_pool) {
 		if (t.joinable()) t.join();
 	}
@@ -62,6 +62,8 @@ void controllerT::done() {
 
 		return true;
 	});
+
+	_done_called = true;
 }
 
 void controllerT::freeze(const size_t id) {
@@ -131,6 +133,8 @@ void controllerT::wait_for_completion_of(const size_t id) {
 
 	thread_pool[id_to_tpool[id]].join();
 }
+
+void controllerT::unlock() { work_counter_lock.unlock(); }
 
 controllerT::execute_config controllerT::generate_opposing_config(const size_t id) const {
 	assert(id < id_to_config.size());
@@ -225,22 +229,23 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	timestamps.tock("job-#" + std::to_string(counter));
 	assert(temp != -1);
 
-	// we are done
-	std::lock_guard<std::mutex> work_counter_lock(worker_counter_mutex);
+	// we are done, get the lock
+	{
+		std::lock_guard<std::mutex> lock(worker_counter_mutex);
 
-	// cleanup
-	delete_domain(counter);
+		// cleanup
+		delete_domain(counter);
 
-	controllerT::execute_config cur_config = id_to_config[counter];
-	FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed at configuration "
-									  << cur_config[0].second;
+		controllerT::execute_config cur_config = id_to_config[counter];
+		FASTLIB_LOG(controller_log, info) << ">> \t '" << command << "' completed";
 
-	for (const auto &i : cur_config) {
-		assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());
-		_machine_usage[i.first][i.second] = std::numeric_limits<size_t>::max();
+		for (const auto &i : cur_config) {
+			assert(machine_usage[i.first][i.second] != std::numeric_limits<size_t>::max());
+			_machine_usage[i.first][i.second] = std::numeric_limits<size_t>::max();
+		}
+
+		callback(counter);
 	}
-
-	callback(counter);
 	worker_counter_cv.notify_all();
 }
 

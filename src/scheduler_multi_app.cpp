@@ -351,6 +351,8 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 								if (ok) break;
 							}
 							controller.thaw(job_id);
+
+							controller.unlock();
 						},
 						job_id);
 					thread_pool[thread_pool.size() - 1].detach();
