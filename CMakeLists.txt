@@ -33,10 +33,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   endif()
 
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
-    ADD_DEFINITIONS(-g3 -O0 -Weverything)
+    ADD_DEFINITIONS(-g3 -Og -Weverything)
 
-    ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow -Wno-c++98-compat-pedantic -Wno-padded)
-    ADD_DEFINITIONS(-Wno-exit-time-destructors -Wno-global-constructors)
+    ADD_DEFINITIONS(-fsanitize=address,undefined,integer -Wthread-safety -fno-omit-frame-pointer)
+    SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined,integer")
+
+    ADD_DEFINITIONS(-Wno-shadow)
   endif()
 
   # Options required to reduce the noise of spdlog
