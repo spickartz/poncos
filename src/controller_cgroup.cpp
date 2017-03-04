@@ -16,45 +16,61 @@
 
 cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm,
 									 const std::string &machine_filename)
-	: controllerT(_comm, machine_filename) {
-}
+	: controllerT(_comm, machine_filename) {}
 
 void cgroup_controller::init() {}
 void cgroup_controller::dismantle() {}
 
 void cgroup_controller::create_domain(const size_t id) {
-	// determine job's slot (should be the same for all config_elem)
+	// get the config for the given id
 	const execute_config &config = id_to_config[id];
-	const size_t slot = config[0].second;
 
-	// determine info to create cgroup
 	const std::string cgroup_name = cmd_name_from_id(id);
-	std::vector<std::vector<unsigned int>> memnode_map;
-	memnode_map.reserve(1);
-	std::vector<unsigned int> mem_nodes(co_configs[slot].mems.begin(), co_configs[slot].mems.end());
-	memnode_map.emplace_back(mem_nodes);
-	std::vector<std::vector<unsigned int>> cpu_map;
-	cpu_map.reserve(1);
-	std::vector<unsigned int> cpu_list(co_configs[slot].cpus.begin(), co_configs[slot].cpus.end());
-	cpu_map.emplace_back(cpu_list);
+
+	// store the tasks in a map with machine id as a key to merge slots on the same machine
+	std::unordered_map<size_t, fast::msg::migfra::Task_container> task_container_map;
 
 	// generate start tasks
 	for (const auto &config_elem : config) {
-		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/task";
-		fast::msg::migfra::Task_container m;
-		auto task = std::make_shared<fast::msg::migfra::Start>();
-		task->vm_name = cgroup_name;
-		task->vcpu_map = cpu_map;
-		task->memnode_map = memnode_map;
-		m.tasks.push_back(task);
-		comm->send_message(m.to_string(), topic);
+		const size_t slot = config_elem.second;
+
+		// determine info to create cgroup
+		std::vector<std::vector<unsigned int>> memnode_map;
+		std::vector<unsigned int> mem_nodes(co_configs[slot].mems.begin(), co_configs[slot].mems.end());
+		memnode_map.emplace_back(mem_nodes);
+
+		std::vector<std::vector<unsigned int>> cpu_map;
+		std::vector<unsigned int> cpu_list(co_configs[slot].cpus.begin(), co_configs[slot].cpus.end());
+		cpu_map.emplace_back(cpu_list);
+
+		auto iter = task_container_map.find(config_elem.first);
+		if (iter != task_container_map.end()) {
+			// already an entry in the map -> append
+			auto task = std::dynamic_pointer_cast<fast::msg::migfra::Start>(iter->second.tasks[0]);
+			task->vcpu_map.get().insert(task->vcpu_map.get().end(), cpu_map.begin(), cpu_map.end());
+			task->memnode_map.get().insert(task->memnode_map.get().end(), memnode_map.begin(), memnode_map.end());
+		} else {
+			auto task = std::make_shared<fast::msg::migfra::Start>();
+			task->vm_name = cgroup_name;
+			task->vcpu_map = cpu_map;
+			task->memnode_map = memnode_map;
+
+			fast::msg::migfra::Task_container m;
+			m.tasks.push_back(task);
+
+			task_container_map.insert({config_elem.first, m});
+		}
+	}
+	for (const auto &tc : task_container_map) {
+		const std::string topic = "fast/migfra/" + machines[tc.first] + "/task";
+		comm->send_message(tc.second.to_string(), topic);
 	}
 
 	// wait for responses
 	fast::msg::migfra::Result_container response;
-	for (const auto &config_elem : config) {
+	for (const auto &tc : task_container_map) {
 		// wait for VMs to be started
-		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/result";
+		const std::string topic = "fast/migfra/" + machines[tc.first] + "/result";
 		response.from_string(comm->get_message(topic));
 
 		// check success for each result
@@ -140,8 +156,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		if (hosts_per_slot[slot] == 0) continue;
 
 		std::string &command = commands[slot];
-                command = " ./cgroup_wrapper.sh ";
-                command += cmd_name_from_id(counter) + " ";
+		command = " ./cgroup_wrapper.sh ";
+		command += cmd_name_from_id(counter) + " ";
 
 		command += job.command;
 	}
