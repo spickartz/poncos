@@ -86,21 +86,31 @@ void cgroup_controller::delete_domain(const size_t id) {
 	// determine info to create cgroup
 	const std::string cgroup_name = cmd_name_from_id(id);
 
-	// generate start tasks
+	// store the tasks in a map with machine id as a key to merge slots on the same machine
+	std::unordered_map<size_t, fast::msg::migfra::Task_container> task_container_map;
+
+	// generate stop tasks
 	for (const auto &config_elem : config) {
-		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/task";
-		fast::msg::migfra::Task_container m;
 		auto task = std::make_shared<fast::msg::migfra::Stop>();
 		task->vm_name = cgroup_name;
+
+		fast::msg::migfra::Task_container m;
 		m.tasks.push_back(task);
-		comm->send_message(m.to_string(), topic);
+
+		task_container_map.insert({config_elem.first, m});
+	}
+
+	// send stop tasks
+	for (const auto &tc : task_container_map) {
+		const std::string topic = "fast/migfra/" + machines[tc.first] + "/task";
+		comm->send_message(tc.second.to_string(), topic);
 	}
 
 	// wait for responses
 	fast::msg::migfra::Result_container response;
-	for (const auto &config_elem : config) {
+	for (const auto &tc : task_container_map) {
 		// wait for VMs to be started
-		std::string topic = "fast/migfra/" + machines[config_elem.first] + "/result";
+		const std::string topic = "fast/migfra/" + machines[tc.first] + "/result";
 		response.from_string(comm->get_message(topic));
 
 		// check success for each result
