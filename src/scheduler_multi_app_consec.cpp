@@ -23,7 +23,7 @@ void multi_app_sched_consec::schedule(const job_queueT &job_queue, fast::MQTT_co
 	// for all commands
 	for (const auto &job : job_queue.jobs) {
 		assert(job.req_cpus() <= controller.machines.size() * SLOT_SIZE * SLOTS);
-		controller.wait_for_ressource(job.req_cpus(), SLOTS);
+		controller.wait_for_resource(job.req_cpus(), SLOTS);
 
 		controllerT::execute_config config = controller.generate_config(job.req_cpus(), controllerT::exclusive);
 		assert(config.size() * SLOT_SIZE >= job.req_cpus());

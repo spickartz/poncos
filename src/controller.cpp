@@ -96,7 +96,7 @@ void controllerT::thaw_opposing(const size_t id) {
 	suspend_resume_config<fast::msg::migfra::Resume>(opposing_config);
 }
 
-void controllerT::wait_for_ressource(const size_t requested, const size_t slots_per_host) {
+void controllerT::wait_for_resource(const size_t requested, const size_t slots_per_host) {
 	if (!work_counter_lock.owns_lock()) work_counter_lock.lock();
 
 	worker_counter_cv.wait(work_counter_lock, [&] {
@@ -249,7 +249,7 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	worker_counter_cv.notify_all();
 }
 
-controllerT::execute_config controllerT::generate_config(const size_t requested_cpus, const ressource_selector selector) const {
+controllerT::execute_config controllerT::generate_config(const size_t requested_cpus, const resource_selector selector) const {
 	execute_config config;
 	for (size_t m = 0; m < machine_usage.size(); ++m) {
 		const auto &mu = machine_usage[m];

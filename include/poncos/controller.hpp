@@ -19,7 +19,7 @@
 
 class controllerT {
   public:
-	enum ressource_selector { exclusive, one_slot_per_node };
+	enum resource_selector { exclusive, one_slot_per_node };
 
   public:
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
@@ -55,7 +55,7 @@ class controllerT {
 
 	size_t execute(const jobT &job, const execute_config &config, std::function<void(size_t)> callback);
 
-	void wait_for_ressource(const size_t, const size_t);
+	void wait_for_resource(const size_t, const size_t);
 	void wait_for_change();
 	void wait_for_completion_of(const size_t);
 	void done();
@@ -63,8 +63,8 @@ class controllerT {
 	// unlock the controller, should typically not called by hand
 	void unlock();
 
-	// generates config for requested ressources
-	execute_config generate_config(const size_t requested_cpus, const ressource_selector selector) const;
+	// generates config for requested resources
+	execute_config generate_config(const size_t requested_cpus, const resource_selector selector) const;
 	execute_config generate_opposing_config(const size_t id) const;
 
 	// getters
