@@ -249,6 +249,40 @@ void controllerT::execute_command_internal(std::string command, size_t counter,
 	worker_counter_cv.notify_all();
 }
 
+controllerT::execute_config controllerT::generate_config(const size_t requested_cpus, const ressource_selector selector) const {
+	execute_config config;
+	for (size_t m = 0; m < machine_usage.size(); ++m) {
+		const auto &mu = machine_usage[m];
+
+		switch (selector) {
+		case exclusive: {
+			// take all slots if empty
+			if (mu[0] == std::numeric_limits<size_t>::max()) {
+				for (size_t s = 0; s < SLOTS; ++s) {
+					config.emplace_back(m, s);
+				}
+			}
+			break;
+		}
+		case one_slot_per_node: {
+			// pick one slot per machine
+			for (size_t s = 0; s < SLOTS; ++s) {
+				if (mu[s] == std::numeric_limits<size_t>::max()) {
+					config.emplace_back(m, s);
+					break;
+				}
+			}
+			break;
+		}
+		}
+
+		// we found enough slots
+		if (config.size() * SLOT_SIZE >= requested_cpus) break;
+	}
+
+	return config;
+}
+
 std::string controllerT::cmd_name_from_id(size_t id) const { return std::string("poncos_") + std::to_string(id); }
 
 template <typename T> void controllerT::suspend_resume_config(const execute_config &config) {

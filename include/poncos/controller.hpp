@@ -19,6 +19,9 @@
 
 class controllerT {
   public:
+	enum ressource_selector { exclusive, one_slot_per_node };
+
+  public:
 	// entries in the vector are read as: (machine index in machinefiles, #slot)
 	using execute_config_elemT = std::pair<size_t, size_t>;
 	using execute_config = std::vector<execute_config_elemT>;
@@ -60,6 +63,8 @@ class controllerT {
 	// unlock the controller, should typically not called by hand
 	void unlock();
 
+	// generates config for requested ressources
+	execute_config generate_config(const size_t requested_cpus, const ressource_selector selector) const;
 	execute_config generate_opposing_config(const size_t id) const;
 
 	// getters
