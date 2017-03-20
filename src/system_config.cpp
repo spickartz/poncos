@@ -20,10 +20,7 @@ void slotT::load(const YAML::Node &node) {
 system_configT::system_configT(std::vector<slotT> slots) : slots(std::move(slots)) {}
 
 system_configT::system_configT(const std::string &config_filename) {
-	std::fstream system_config_file(config_filename, std::fstream::in);
-	std::stringstream system_config_stream;
-	system_config_stream << system_config_file.rdbuf();
-	fast::Serializable::from_string(system_config_stream.str());
+	fast::Serializable::from_string(read_file_to_string(config_filename));
 }
 
 YAML::Node system_configT::emit() const {

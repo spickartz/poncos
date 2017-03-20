@@ -35,3 +35,12 @@ void read_file(const std::string& filename, std::vector<std::string> &command_qu
 		if (command[0] != '#') command_queue.push_back(command);
 	}
 }
+
+
+std::string read_file_to_string(const std::string& filename) {
+	std::fstream file_stream(filename, std::fstream::in);
+	std::stringstream string_stream;
+	string_stream << file_stream.rdbuf();
+
+	return string_stream.str();
+}
