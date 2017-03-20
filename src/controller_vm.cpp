@@ -138,12 +138,12 @@ void vm_controller::update_config(const size_t id, const execute_config &new_con
 
 std::vector<std::vector<unsigned int>> vm_controller::generate_vcpu_map(size_t slot_id) const {
 	std::vector<std::vector<unsigned int>> vcpu_map;
-	vcpu_map.reserve(SLOT_SIZE);
+	vcpu_map.reserve(system_config.slot_size());
 
 	for (auto cpu_id : system_config[slot_id].cpus) {
 		vcpu_map.emplace_back(std::vector<unsigned int>({static_cast<unsigned int>(cpu_id)}));
 	}
-	assert(vcpu_map.size() == SLOT_SIZE);
+	assert(vcpu_map.size() == system_config.slot_size());
 
 	return vcpu_map;
 }
