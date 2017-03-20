@@ -36,7 +36,6 @@ struct sched_configT {
 
 constexpr size_t SLOT_SIZE = 12;
 constexpr size_t SLOTS = 2;
-extern const sched_configT co_configs[SLOTS];
 
 void read_file(const std::string &filename, std::vector<std::string> &command_queue);
 

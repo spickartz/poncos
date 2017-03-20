@@ -14,8 +14,7 @@ struct schedulerT {
 	virtual ~schedulerT();
 	virtual void schedule(const job_queueT &, fast::MQTT_communicator &, controllerT &, std::chrono::seconds) = 0;
 	virtual void command_done(const size_t config, controllerT &controller) = 0;
-	static std::vector<double> run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
-										   const controllerT::execute_config &config);
+	std::vector<double> run_distgen(fast::MQTT_communicator &comm, const controllerT &controller, const size_t job_id);
 };
 
 #endif /* end of include guard: poncos_scheduler */

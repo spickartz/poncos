@@ -9,16 +9,16 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_log, info);
 
 schedulerT::~schedulerT() = default;
 
-std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const std::vector<std::string> &machines,
-											const controllerT::execute_config &config) {
-
+std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const controllerT &controller, const size_t job_id) {
+	const std::vector<std::string> &machines = controller.machines;
+	const controllerT::execute_config &config = controller.generate_opposing_config(job_id);
 	assert(!config.empty());
 	// ask for measurements
 	{
 		for (const auto &c : config) {
 			fast::msg::agent::mmbwmon::request m;
 
-			const auto &slot_conf = co_configs[c.second];
+			const auto &slot_conf = controller.system_config[c.second];
 
 			// TODO check if we can use the same type
 			m.cores.resize(slot_conf.cpus.size());

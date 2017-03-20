@@ -207,7 +207,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 
 	// for all commands
 	for (const auto &job : job_queue.jobs) {
-		assert(job.req_cpus() <= controller.machines.size() * SLOT_SIZE);
+		assert(job.req_cpus() <= controller.machines.size() * controller.system_config.slot_size());
 		controller.wait_for_ressource(job.req_cpus(), 1);
 
 		// select ressources
@@ -226,10 +226,10 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 					break;
 				}
 			}
-			if (config.size() * SLOT_SIZE == job.req_cpus()) break;
+			if (config.size() * controller.system_config.slot_size() == job.req_cpus()) break;
 		}
 
-		assert(config.size() * SLOT_SIZE == job.req_cpus());
+		assert(config.size() * controller.system_config.slot_size() == job.req_cpus());
 
 		// start job
 		auto job_id = controller.execute(
@@ -244,7 +244,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 
 		// start distgen
 		auto distgen_res =
-			schedulerT::run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+			schedulerT::run_distgen(comm, controller, job_id);
 		assert(distgen_res.size() == config.size());
 
 		for (size_t i = 0; i < distgen_res.size(); ++i) {

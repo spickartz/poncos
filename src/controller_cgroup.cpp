@@ -15,8 +15,8 @@
 #include <fast-lib/message/agent/mmbwmon/stop.hpp>
 
 cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm,
-									 const std::string &machine_filename)
-	: controllerT(_comm, machine_filename) {}
+									 const std::string &machine_filename, const std::string &system_config_filename)
+	: controllerT(_comm, machine_filename, system_config_filename) {}
 
 void cgroup_controller::init() {}
 void cgroup_controller::dismantle() {}
@@ -36,11 +36,11 @@ void cgroup_controller::create_domain(const size_t id) {
 
 		// determine info to create cgroup
 		std::vector<std::vector<unsigned int>> memnode_map;
-		std::vector<unsigned int> mem_nodes(co_configs[slot].mems.begin(), co_configs[slot].mems.end());
+		std::vector<unsigned int> mem_nodes(system_config[slot].mems.begin(), system_config[slot].mems.end());
 		memnode_map.emplace_back(mem_nodes);
 
 		std::vector<std::vector<unsigned int>> cpu_map;
-		std::vector<unsigned int> cpu_list(co_configs[slot].cpus.begin(), co_configs[slot].cpus.end());
+		std::vector<unsigned int> cpu_list(system_config[slot].cpus.begin(), system_config[slot].cpus.end());
 		cpu_map.emplace_back(cpu_list);
 
 		auto iter = task_container_map.find(config_elem.first);
@@ -48,7 +48,8 @@ void cgroup_controller::create_domain(const size_t id) {
 			// already an entry in the map -> append
 			auto task = std::dynamic_pointer_cast<fast::msg::migfra::Start>(iter->second.tasks[0]);
 			task->vcpu_map.get()[0].insert(task->vcpu_map.get()[0].end(), cpu_map[0].begin(), cpu_map[0].end());
-			task->memnode_map.get()[0].insert(task->memnode_map.get()[0].end(), memnode_map[0].begin(), memnode_map[0].end());
+			task->memnode_map.get()[0].insert(task->memnode_map.get()[0].end(), memnode_map[0].begin(),
+											  memnode_map[0].end());
 		} else {
 			auto task = std::make_shared<fast::msg::migfra::Start>();
 			task->vm_name = cgroup_name;
@@ -160,7 +161,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		++hosts_per_slot[config[i].second];
 	}
 	assert(job.req_cpus() <=
-		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * SLOT_SIZE);
+		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * system_config.slot_size());
 
 	for (size_t slot = 0; slot < SLOTS; ++slot) {
 		if (hosts_per_slot[slot] == 0) continue;
@@ -189,8 +190,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	std::ofstream hosts_file(hosts_filename);
 	assert(hosts_file.is_open());
 
-	size_t process_per_slot = SLOT_SIZE / job.threads_per_proc;
-	assert(SLOT_SIZE % job.threads_per_proc == 0);
+	size_t process_per_slot = system_config.slot_size() / job.threads_per_proc;
+	assert(system_config.slot_size() % job.threads_per_proc == 0);
 
 	for (size_t i = 0; i <= SLOTS; ++i) {
 		if (hosts_per_slot[i] == 0) continue;

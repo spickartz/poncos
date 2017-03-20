@@ -28,7 +28,7 @@
 class vm_controller : public controllerT {
   public:
 	vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
-				  std::string _slot_path);
+				  const std::string &system_config_filename, std::string _slot_path);
 	~vm_controller();
 
 	void init();

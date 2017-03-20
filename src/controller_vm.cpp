@@ -19,8 +19,8 @@ FASTLIB_LOG_INIT(vm_controller_log, "vm-controller")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(vm_controller_log, info);
 
 vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
-							 std::string _slot_path)
-	: controllerT(_comm, machine_filename), slot_path(std::move(_slot_path)) {
+							 const std::string &system_config_filename, std::string _slot_path)
+	: controllerT(_comm, machine_filename, system_config_filename), slot_path(std::move(_slot_path)) {
 	// subscribe to the various topics
 	for (const std::string &mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";
@@ -140,7 +140,7 @@ std::vector<std::vector<unsigned int>> vm_controller::generate_vcpu_map(size_t s
 	std::vector<std::vector<unsigned int>> vcpu_map;
 	vcpu_map.reserve(SLOT_SIZE);
 
-	for (auto cpu_id : co_configs[slot_id].cpus) {
+	for (auto cpu_id : system_config[slot_id].cpus) {
 		vcpu_map.emplace_back(std::vector<unsigned int>({static_cast<unsigned int>(cpu_id)}));
 	}
 	assert(vcpu_map.size() == SLOT_SIZE);

@@ -10,10 +10,12 @@
 FASTLIB_LOG_INIT(controller_log, "controller")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(controller_log, info);
 
-controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename)
+controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename,
+						 const std::string &system_config_filename)
 	: machines(_machines), available_slots(_available_slots), machine_usage(_machine_usage),
-	  id_to_config(_id_to_config), id_to_job(_id_to_job), cmd_counter(0), work_counter_lock(worker_counter_mutex),
-	  comm(std::move(_comm)), timestamps(true, "timestamps"), _done_called(false) {
+	  id_to_config(_id_to_config), id_to_job(_id_to_job), system_config(_system_config), cmd_counter(0),
+	  work_counter_lock(worker_counter_mutex), comm(std::move(_comm)), timestamps(true, "timestamps"),
+	  _system_config(system_config_filename), _done_called(false) {
 
 	// fill the machine file
 	FASTLIB_LOG(controller_log, info) << "Reading machine file " << machine_filename << " ...";
@@ -31,6 +33,14 @@ controllerT::controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const s
 		comm->add_subscription(topic);
 	}
 	FASTLIB_LOG(controller_log, info) << "==============";
+
+	FASTLIB_LOG(controller_log, info) << "System config:";
+	FASTLIB_LOG(controller_log, info) << "==============";
+	for (const auto &slot : system_config.slots) {
+		FASTLIB_LOG(controller_log, info) << slot;
+	}
+	FASTLIB_LOG(controller_log, info) << "==============";
+
 
 	_machine_usage.assign(_machines.size(), std::array<size_t, 2>{{std::numeric_limits<size_t>::max(),
 																   std::numeric_limits<size_t>::max()}});
@@ -113,7 +123,7 @@ void controllerT::wait_for_ressource(const size_t requested, const size_t slots_
 				}
 			}
 			if (allocated_slots == slots_per_host) {
-				counter += SLOT_SIZE * slots_per_host;
+				counter += system_config.slot_size() * slots_per_host;
 			}
 		}
 

@@ -24,7 +24,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 							 std::chrono::seconds wait_time) {
 	// for all commands
 	for (const auto &job : job_queue.jobs) {
-		assert(job.req_cpus() == controller.machines.size() * SLOT_SIZE);
+		assert(job.req_cpus() == controller.machines.size() * controller.system_config.slot_size());
 
 		controller.wait_for_ressource(job.req_cpus(), 1);
 
@@ -63,7 +63,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 
 		// measure distgen result
 		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Running distgend";
-		auto temp = run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		auto temp = run_distgen(comm, controller, job_id);
 		co_config_distgend[new_slot] = *std::max_element(temp.begin(), temp.end());
 
 		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Result for command '" << job
