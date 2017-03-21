@@ -203,9 +203,10 @@ void vm_controller::start_all_VMs() {
 		std::string topic = "fast/migfra/" + mach + "/task";
 
 		// create task container and add tasks per slot
+		const size_t slots = system_config.slots.size();
 		fast::msg::migfra::Task_container m;
-		std::array<std::string, SLOTS> cur_slot_allocation;
-		for (size_t slot = 0; slot < SLOTS; ++slot) {
+		std::vector<std::string> cur_slot_allocation(slots);
+		for (size_t slot = 0; slot < slots; ++slot) {
 			// get free vm
 			vm_pool_elemT free_vm = glob_vm_pool.front();
 			glob_vm_pool.pop_front();

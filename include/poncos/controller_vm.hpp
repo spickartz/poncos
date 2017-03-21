@@ -61,7 +61,7 @@ class vm_controller : public controllerT {
 	// stores the VMs used in the two slots per machine
 	// vector index -> machine index (see: machines)
 	// vector elem  -> array of VM names per slot
-	std::vector<std::array<std::string, SLOTS>> vm_locations;
+	std::vector<std::vector<std::string>> vm_locations;
 };
 
 #endif /* end of include guard: poncos_controller_vm */

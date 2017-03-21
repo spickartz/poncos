@@ -24,7 +24,7 @@ class controllerT {
 	using execute_config_elemT = std::pair<size_t, size_t>;
 	using execute_config = std::vector<execute_config_elemT>;
 	// index = entry in machines, pair = both slots, numeric_limits<size_t>::max if empty
-	using slot_allocationT = std::array<size_t, SLOTS>;
+	using slot_allocationT = std::vector<size_t>;
 	using machine_usageT = std::vector<slot_allocationT>;
 
   public:

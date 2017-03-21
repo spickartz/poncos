@@ -141,18 +141,19 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 	// TODO refactor, eg seperate file creation (shouln't that be part of controllerT)
 
-	// index 0 == SLOT 0; index 1 == SLOT 1; index SLOTS == all slots on the same system are used
-	std::vector<std::string> host_lists[SLOTS + 1];
-	size_t hosts_per_slot[SLOTS + 1] = {0};
-	std::string commands[SLOTS + 1];
+	// index 0 == slot 0; index 1 == slot 1; index slots == all slots on the same system are used
+	const size_t slots = system_config.slots.size();
+	std::vector<std::vector<std::string>> host_lists(1, std::vector<std::string>(slots + 1));
+	std::vector<size_t> hosts_per_slot(slots + 1, 0);
+	std::vector<std::string> commands(slots + 1);
 	execute_config sorted_config = sort_config_by_hostname(config);
 
 	for (size_t i = 0; i < config.size(); ++i) {
 		// both slots of a system used?
 		if (i + 1 < config.size() && config[i].first == config[i + 1].first) {
-			host_lists[SLOTS].emplace_back(machines[config[i].first]);
-			host_lists[SLOTS].emplace_back(machines[config[i].first]);
-			hosts_per_slot[SLOTS] += 2;
+			host_lists[slots].emplace_back(machines[config[i].first]);
+			host_lists[slots].emplace_back(machines[config[i].first]);
+			hosts_per_slot[slots] += 2;
 
 			++i;
 			continue;
@@ -163,7 +164,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	assert(job.req_cpus() <=
 		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * system_config.slot_size());
 
-	for (size_t slot = 0; slot < SLOTS; ++slot) {
+	for (size_t slot = 0; slot < slots; ++slot) {
 		if (hosts_per_slot[slot] == 0) continue;
 
 		std::string &command = commands[slot];
@@ -174,8 +175,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	}
 
 	// some dedicated nodes, requires special cgroup config
-	if (hosts_per_slot[SLOTS] != 0) {
-		std::string &command = commands[SLOTS];
+	if (hosts_per_slot[slots] != 0) {
+		std::string &command = commands[slots];
 		command = " ./cgroup_wrapper.sh ";
 		command += cmd_name_from_id(counter) + " ";
 
@@ -193,7 +194,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 	size_t process_per_slot = system_config.slot_size() / job.threads_per_proc;
 	assert(system_config.slot_size() % job.threads_per_proc == 0);
 
-	for (size_t i = 0; i <= SLOTS; ++i) {
+	for (size_t i = 0; i <= slots; ++i) {
 		if (hosts_per_slot[i] == 0) continue;
 
 		for (const auto &host : host_lists[i]) {
@@ -209,7 +210,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 	// a colon must be added between slots
 	bool add_colon = false;
-	for (size_t slot = 0; slot < SLOTS + 1; ++slot) {
+	for (size_t slot = 0; slot < slots + 1; ++slot) {
 		if (hosts_per_slot[slot] == 0) continue;
 
 		if (add_colon) ret += " : ";
