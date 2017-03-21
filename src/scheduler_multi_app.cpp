@@ -18,7 +18,6 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_multi_app_log, info);
 // TODO make it controllable via command line parameter
 constexpr double PER_MACHINE_TH = 0.9;
 
-
 multi_app_sched::multi_app_sched(const system_configT &system_config) : schedulerT(system_config) {}
 
 double multi_app_sched::membw_util_of_node(const size_t &idx) const {
@@ -247,8 +246,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 		controller.freeze_opposing(job_id);
 
 		// start distgen
-		auto distgen_res =
-			schedulerT::run_distgen(comm, controller, job_id);
+		auto distgen_res = schedulerT::run_distgen(comm, controller, job_id);
 		assert(distgen_res.size() == config.size());
 
 		for (size_t i = 0; i < distgen_res.size(); ++i) {

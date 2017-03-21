@@ -4,8 +4,8 @@
 #include <fstream>
 
 jobT::jobT(size_t nprocs, size_t threads_per_proc, std::string command, bool uses_sr_protocol)
-	: nprocs(nprocs), threads_per_proc(threads_per_proc),
-	  command(std::move(command)), uses_sr_protocol(uses_sr_protocol) {}
+	: nprocs(nprocs), threads_per_proc(threads_per_proc), command(std::move(command)),
+	  uses_sr_protocol(uses_sr_protocol) {}
 
 YAML::Node jobT::emit() const {
 	YAML::Node node;

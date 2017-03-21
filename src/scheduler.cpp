@@ -10,7 +10,8 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_log, info);
 schedulerT::schedulerT(const system_configT &system_config) : system_config(system_config) {}
 schedulerT::~schedulerT() = default;
 
-std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const controllerT &controller, const size_t job_id) {
+std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const controllerT &controller,
+											const size_t job_id) {
 	const std::vector<std::string> &machines = controller.machines;
 	const controllerT::execute_config &config = controller.generate_opposing_config(job_id);
 	assert(!config.empty());
@@ -28,7 +29,8 @@ std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const
 			}
 
 			const std::string topic = "fast/agent/" + machines[c.first] + "/mmbwmon/request";
-			FASTLIB_LOG(scheduler_log, debug) << "sending message \n topic: " << topic << "\n message:\n" << m.to_string();
+			FASTLIB_LOG(scheduler_log, debug) << "sending message \n topic: " << topic << "\n message:\n"
+											  << m.to_string();
 			comm.send_message(m.to_string(), topic);
 		}
 	}

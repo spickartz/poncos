@@ -38,4 +38,3 @@ std::ostream &operator<<(std::ostream &os, const slotT &slot) {
 
 	return os;
 }
-

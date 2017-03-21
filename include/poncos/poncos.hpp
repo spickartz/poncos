@@ -35,7 +35,7 @@ struct sched_configT {
 };
 
 void read_file(const std::string &filename, std::vector<std::string> &command_queue);
-std::string read_file_to_string(const std::string& filename);
+std::string read_file_to_string(const std::string &filename);
 
 namespace std {
 // The following operator<< are implemented in the std namespace to allow fastlib

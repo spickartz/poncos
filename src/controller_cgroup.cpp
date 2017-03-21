@@ -161,8 +161,8 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 		host_lists[config[i].second].emplace_back(machines[config[i].first]);
 		++hosts_per_slot[config[i].second];
 	}
-	assert(job.req_cpus() <=
-		   std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) * system_config.slot_size());
+	assert(job.req_cpus() <= std::accumulate(std::begin(hosts_per_slot), std::end(hosts_per_slot), size_t(0)) *
+								 system_config.slot_size());
 
 	for (size_t slot = 0; slot < slots; ++slot) {
 		if (hosts_per_slot[slot] == 0) continue;
