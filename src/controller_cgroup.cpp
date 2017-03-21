@@ -15,8 +15,8 @@
 #include <fast-lib/message/agent/mmbwmon/stop.hpp>
 
 cgroup_controller::cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm,
-									 const std::string &machine_filename, const std::string &system_config_filename)
-	: controllerT(_comm, machine_filename, system_config_filename) {}
+									 const std::string &machine_filename, const system_configT &system_config)
+	: controllerT(_comm, machine_filename, system_config) {}
 
 void cgroup_controller::init() {}
 void cgroup_controller::dismantle() {}

@@ -7,6 +7,7 @@
 FASTLIB_LOG_INIT(scheduler_log, "scheduler")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_log, info);
 
+schedulerT::schedulerT(const system_configT &system_config) : system_config(system_config) {}
 schedulerT::~schedulerT() = default;
 
 std::vector<double> schedulerT::run_distgen(fast::MQTT_communicator &comm, const controllerT &controller, const size_t job_id) {

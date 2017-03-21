@@ -24,7 +24,7 @@
 class cgroup_controller : public controllerT {
   public:
 	cgroup_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
-					  const std::string &system_config_filename);
+					  const system_configT &system_config);
 	~cgroup_controller();
 
 	void init();

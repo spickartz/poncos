@@ -169,16 +169,17 @@ int main(int argc, char const *argv[]) {
 														  static_cast<int>(port), 60);
 
 	controllerT *controller;
+	system_configT system_config(system_config_filename);
 
 	if (use_vms)
-		controller = new vm_controller(comm, machine_filename, system_config_filename, slot_path);
+		controller = new vm_controller(comm, machine_filename, system_config, slot_path);
 	else
-		controller = new cgroup_controller(comm, machine_filename, system_config_filename);
+		controller = new cgroup_controller(comm, machine_filename, system_config);
 
 	schedulerT *sched = nullptr;
-	if (use_multi_sched) sched = new multi_app_sched();
-	if (use_multi_sched_consec) sched = new multi_app_sched_consec();
-	if (sched == nullptr) sched = new two_app_sched();
+	if (use_multi_sched) sched = new multi_app_sched(system_config);
+	if (use_multi_sched_consec) sched = new multi_app_sched_consec(system_config);
+	if (sched == nullptr) sched = new two_app_sched(system_config);
 
 	// Create Time_measurement instance
 	fast::msg::migfra::Time_measurement timers(true, "timestamps");

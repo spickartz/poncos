@@ -34,8 +34,6 @@ struct sched_configT {
 	std::vector<unsigned char> mems;
 };
 
-constexpr size_t SLOTS = 2;
-
 void read_file(const std::string &filename, std::vector<std::string> &command_queue);
 std::string read_file_to_string(const std::string& filename);
 

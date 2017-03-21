@@ -29,7 +29,7 @@ class controllerT {
 
   public:
 	controllerT(std::shared_ptr<fast::MQTT_communicator> _comm, const std::string &machine_filename,
-				const std::string &system_config_filename);
+				const system_configT &system_config);
 	virtual ~controllerT();
 
 	virtual void init() = 0;
@@ -77,7 +77,7 @@ class controllerT {
 	// maps ids to the jobs
 	const std::vector<jobT> &id_to_job;
 	// stores the slot configuration as defined by a specification in YAML format
-	system_configT &system_config;
+	const system_configT &system_config;
 
   protected:
 	// executed by a new thread, calls system to start the application
@@ -118,7 +118,6 @@ class controllerT {
 	machine_usageT _machine_usage;
 	std::vector<execute_config> _id_to_config;
 	std::vector<jobT> _id_to_job;
-	system_configT _system_config;
 	bool _done_called;
 };
 

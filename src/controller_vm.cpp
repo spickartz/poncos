@@ -19,8 +19,8 @@ FASTLIB_LOG_INIT(vm_controller_log, "vm-controller")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(vm_controller_log, info);
 
 vm_controller::vm_controller(const std::shared_ptr<fast::MQTT_communicator> &_comm, const std::string &machine_filename,
-							 const std::string &system_config_filename, std::string _slot_path)
-	: controllerT(_comm, machine_filename, system_config_filename), slot_path(std::move(_slot_path)) {
+							 const system_configT &system_config, std::string _slot_path)
+	: controllerT(_comm, machine_filename, system_config), slot_path(std::move(_slot_path)) {
 	// subscribe to the various topics
 	for (const std::string &mach : machines) {
 		std::string topic = "fast/migfra/" + mach + "/result";

@@ -18,11 +18,14 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_multi_app_log, info);
 // TODO make it controllable via command line parameter
 constexpr double PER_MACHINE_TH = 0.9;
 
+
+multi_app_sched::multi_app_sched(const system_configT &system_config) : schedulerT(system_config) {}
+
 double multi_app_sched::membw_util_of_node(const size_t &idx) const {
 	assert(idx < membw_util.size());
 
 	double total_membw_util = 0;
-	for (size_t slot = 0; slot < SLOTS; ++slot) {
+	for (size_t slot = 0; slot < system_config.slots.size(); ++slot) {
 		total_membw_util += membw_util[idx][slot];
 	}
 
@@ -59,7 +62,7 @@ std::vector<size_t> multi_app_sched::check_membw(const controllerT::execute_conf
 	for (const auto &c : config) {
 		// get membw
 		double membw = 0.0;
-		for (size_t s = 0; s < SLOTS; ++s) {
+		for (size_t s = 0; s < system_config.slots.size(); ++s) {
 			membw += membw_util[c.first][s];
 		}
 
@@ -127,16 +130,17 @@ controllerT::execute_config multi_app_sched::generate_new_config(const controlle
 		// 	slot exhibits the lower membw_util on old_mach, we
 		// 	should swap with the slot having the higher value on the
 		// 	new_mach and vice versa.
-		std::array<double, SLOTS>::const_iterator new_slot_it;
+		const size_t slots = system_config.slots.size();
+		std::vector<double>::const_iterator new_slot_it;
 		if (membw_util[old_mach][old_slot] <
-			membw_util[old_mach][(old_slot + 1) % SLOTS]) { // TODO: what about more than 2 SLOTS?
+			membw_util[old_mach][(old_slot + 1) % slots]) { // TODO: what about more than 2 slots?
 			new_slot_it = std::max_element(membw_util[new_mach].begin(), membw_util[new_mach].end());
 		} else {
 			new_slot_it = std::min_element(membw_util[new_mach].begin(), membw_util[new_mach].end());
 		}
 		const auto new_slot = static_cast<size_t>(std::distance(membw_util[new_mach].begin(), new_slot_it));
-		assert(membw_util[old_mach][(old_slot + 1) % SLOTS] + membw_util[new_mach][new_slot] < PER_MACHINE_TH);
-		assert(membw_util[new_mach][(new_slot + 1) % SLOTS] + membw_util[old_mach][old_slot] < PER_MACHINE_TH);
+		assert(membw_util[old_mach][(old_slot + 1) % slots] + membw_util[new_mach][new_slot] < PER_MACHINE_TH);
+		assert(membw_util[new_mach][(new_slot + 1) % slots] + membw_util[old_mach][old_slot] < PER_MACHINE_TH);
 
 		new_config_sorted.emplace_back(new_mach, std::distance(membw_util[new_mach].begin(), new_slot_it));
 	}
@@ -203,7 +207,7 @@ void multi_app_sched::command_done(const size_t id, controllerT &controller) {
 void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
 							   std::chrono::seconds wait_time) {
 
-	membw_util.resize(controller.machines.size(), std::array<double, 2>{{0.0, 0.0}});
+	membw_util.resize(controller.machines.size(), std::vector<double>(system_config.slots.size(), 0));
 
 	// for all commands
 	for (const auto &job : job_queue.jobs) {
@@ -220,7 +224,7 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			// -> prioritize something else?
 
 			// pick one slot per machine
-			for (size_t s = 0; s < SLOTS; ++s) {
+			for (size_t s = 0; s < system_config.slots.size(); ++s) {
 				if (mu[s] == std::numeric_limits<size_t>::max()) {
 					config.emplace_back(m, s);
 					break;
@@ -268,9 +272,9 @@ void multi_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communica
 			for (size_t i = 0; i < membw_util.size(); ++i) {
 				str += "(";
 				double sum = 0;
-				for (size_t s = 0; s < SLOTS; ++s) {
+				for (size_t s = 0; s < system_config.slots.size(); ++s) {
 					str += std::to_string(membw_util[i][s]);
-					if (s != SLOTS - 1) str += " + ";
+					if (s != system_config.slots.size() - 1) str += " + ";
 					sum += membw_util[i][s];
 				}
 				str += " = ";

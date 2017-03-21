@@ -11,10 +11,14 @@
 #include <fast-lib/mqtt_communicator.hpp>
 
 struct schedulerT {
+	schedulerT(const system_configT &system_config);
 	virtual ~schedulerT();
 	virtual void schedule(const job_queueT &, fast::MQTT_communicator &, controllerT &, std::chrono::seconds) = 0;
 	virtual void command_done(const size_t config, controllerT &controller) = 0;
 	std::vector<double> run_distgen(fast::MQTT_communicator &comm, const controllerT &controller, const size_t job_id);
+
+  protected:
+	const system_configT &system_config;
 };
 
 #endif /* end of include guard: poncos_scheduler */
