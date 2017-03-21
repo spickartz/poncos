@@ -143,7 +143,7 @@ std::string cgroup_controller::generate_command(const jobT &job, size_t counter,
 
 	// index 0 == slot 0; index 1 == slot 1; index slots == all slots on the same system are used
 	const size_t slots = system_config.slots.size();
-	std::vector<std::vector<std::string>> host_lists(1, std::vector<std::string>(slots + 1));
+	std::vector<std::vector<std::string>> host_lists(slots+1);
 	std::vector<size_t> hosts_per_slot(slots + 1, 0);
 	std::vector<std::string> commands(slots + 1);
 	execute_config sorted_config = sort_config_by_hostname(config);
