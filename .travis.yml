@@ -49,6 +49,16 @@ matrix:
       env:
           - COMPILERC=clang
           - CLANGV=3.9.1
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+    - compiler: clang
+      env:
+          - COMPILERC=clang
+          - CLANGV=4.0.0
           - RUNCLANGTIDY=TRUE
       addons:
         apt:
