@@ -6,6 +6,7 @@
 #include <thread>
 
 struct multi_app_sched : public schedulerT {
+	multi_app_sched(const system_configT &system_config);
 
 	virtual void schedule(const job_queueT &job_queue, fast::MQTT_communicator &comm, controllerT &controller,
 						  std::chrono::seconds wait_time);
@@ -21,7 +22,7 @@ struct multi_app_sched : public schedulerT {
 	std::vector<size_t> sort_machines_by_membw_util(const std::vector<size_t> &machine_idxs, const bool reverse) const;
 
 	double membw_util_of_node(const size_t &idx) const;
-	std::vector<std::array<double, SLOTS>> membw_util;
+	std::vector<std::vector<double>> membw_util;
 	std::vector<std::thread> thread_pool;
 };
 

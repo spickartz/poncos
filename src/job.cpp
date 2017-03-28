@@ -1,10 +1,11 @@
 #include "poncos/job.hpp"
+#include "poncos/poncos.hpp"
 
 #include <fstream>
 
 jobT::jobT(size_t nprocs, size_t threads_per_proc, std::string command, bool uses_sr_protocol)
-	: nprocs(nprocs), threads_per_proc(threads_per_proc),
-	  command(std::move(command)), uses_sr_protocol(uses_sr_protocol) {}
+	: nprocs(nprocs), threads_per_proc(threads_per_proc), command(std::move(command)),
+	  uses_sr_protocol(uses_sr_protocol) {}
 
 YAML::Node jobT::emit() const {
 	YAML::Node node;
@@ -25,10 +26,7 @@ void jobT::load(const YAML::Node &node) {
 job_queueT::job_queueT(std::vector<jobT> jobs) : jobs(std::move(jobs)) {}
 
 job_queueT::job_queueT(const std::string &queue_filename) {
-	std::fstream job_queue_file(queue_filename, std::fstream::in);
-	std::stringstream job_queue_stream;
-	job_queue_stream << job_queue_file.rdbuf();
-	fast::Serializable::from_string(job_queue_stream.str());
+	fast::Serializable::from_string(read_file_to_string(queue_filename));
 }
 
 YAML::Node job_queueT::emit() const {

@@ -34,11 +34,8 @@ struct sched_configT {
 	std::vector<unsigned char> mems;
 };
 
-constexpr size_t SLOT_SIZE = 8;
-constexpr size_t SLOTS = 2;
-extern const sched_configT co_configs[SLOTS];
-
 void read_file(const std::string &filename, std::vector<std::string> &command_queue);
+std::string read_file_to_string(const std::string &filename);
 
 namespace std {
 // The following operator<< are implemented in the std namespace to allow fastlib

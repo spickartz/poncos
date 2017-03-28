@@ -14,6 +14,10 @@
 FASTLIB_LOG_INIT(scheduler_two_app_log, "two-app scheduler")
 FASTLIB_LOG_SET_LEVEL_GLOBAL(scheduler_two_app_log, info);
 
+two_app_sched::two_app_sched(const system_configT &system_config)
+	: schedulerT(system_config), co_config_in_use(std::vector<bool>(system_config.slots.size(), false)),
+	  co_config_distgend(std::vector<double>(system_config.slots.size(), 0.0)) {}
+
 // called after a command was completed
 void two_app_sched::command_done(const size_t config, controllerT & /*controller*/) {
 	co_config_in_use[config] = false;
@@ -24,14 +28,14 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 							 std::chrono::seconds wait_time) {
 	// for all commands
 	for (const auto &job : job_queue.jobs) {
-		assert(job.req_cpus() == controller.machines.size() * SLOT_SIZE);
+		assert(job.req_cpus() == controller.machines.size() * controller.system_config.slot_size());
 
 		controller.wait_for_ressource(job.req_cpus(), 1);
 
 		// search for a free slot and assign it to a new job
 		size_t new_slot = 0;
 		size_t job_id = 0;
-		for (; new_slot < SLOTS; ++new_slot) {
+		for (; new_slot < system_config.slots.size(); ++new_slot) {
 			if (!co_config_in_use[new_slot]) {
 				co_config_in_use[new_slot] = true;
 
@@ -50,7 +54,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 				break;
 			}
 		}
-		assert(new_slot < SLOTS);
+		assert(new_slot < system_config.slots.size());
 
 		// for the initialization phase of the application to be completed
 		std::this_thread::sleep_for(wait_time);
@@ -63,7 +67,7 @@ void two_app_sched::schedule(const job_queueT &job_queue, fast::MQTT_communicato
 
 		// measure distgen result
 		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Running distgend";
-		auto temp = run_distgen(comm, controller.machines, controller.generate_opposing_config(job_id));
+		auto temp = run_distgen(comm, controller, job_id);
 		co_config_distgend[new_slot] = *std::max_element(temp.begin(), temp.end());
 
 		FASTLIB_LOG(scheduler_two_app_log, info) << ">> \t Result for command '" << job

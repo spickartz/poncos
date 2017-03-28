@@ -99,7 +99,7 @@ include_directories(include)
 
 ########
 # Compiling and linking
-add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/sandybridge_EP.cpp system_config/vm_pool.cpp src/job.cpp src/controller.cpp src/controller_cgroup.cpp src/controller_vm.cpp src/scheduler.cpp src/scheduler_two_app.cpp src/scheduler_multi_app.cpp src/scheduler_multi_app_consec.cpp)
+add_executable(pons_macsnb src/poncos.cpp src/helper.cpp system_config/vm_pool.cpp src/job.cpp src/controller.cpp src/controller_cgroup.cpp src/controller_vm.cpp src/scheduler.cpp src/scheduler_two_app.cpp src/scheduler_multi_app.cpp src/scheduler_multi_app_consec.cpp src/system_config.cpp)
 add_dependencies(pons_macsnb libfast)
 target_link_libraries(pons_macsnb fastlib ${CMAKE_THREAD_LIBS_INIT} rt uuid)
 set_property(TARGET pons_macsnb PROPERTY C_STANDARD 99)

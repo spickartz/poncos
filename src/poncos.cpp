@@ -32,6 +32,7 @@ static std::string server;
 static size_t port = 1883;
 static std::string queue_filename;
 static std::string machine_filename;
+static std::string system_config_filename;
 static std::string slot_path;
 static std::chrono::seconds wait_time(20);
 static bool use_vms = false;
@@ -47,6 +48,7 @@ static bool use_multi_sched_consec = false;
 	std::cout << "\t --port \t\t Port of the MQTT broker. \t\t\t Default: 1883\n";
 	std::cout << "\t --queue \t\t Filename for the job queue. \t\t\t Required!\n";
 	std::cout << "\t --machine \t\t Filename containing node names. \t\t Required!\n";
+	std::cout << "\t --system-config \t Filename containing the slot configuration in YAML forma. \t\t Required!\n";
 	std::cout << "\t --slot-path \t\t VM only: Path to XML slot specifications. \t Required!\n";
 	std::cout << "\t --wait \t\t Seconds to wait before starting distgen. \t Default: 20\n";
 
@@ -97,6 +99,14 @@ static void parse_options(size_t argc, const char **argv) {
 			++i;
 			continue;
 		}
+		if (arg == "--system-config") {
+			if (i + 1 >= argc) {
+				print_help(argv[0]);
+			}
+			system_config_filename = std::string(argv[i + 1]);
+			++i;
+			continue;
+		}
 
 		if (arg == "--vm") {
 			use_vms = true;
@@ -134,7 +144,7 @@ static void parse_options(size_t argc, const char **argv) {
 	}
 
 	if (use_multi_sched_consec && use_multi_sched) print_help(argv[0]);
-	if (queue_filename == "" || machine_filename == "") print_help(argv[0]);
+	if (queue_filename == "" || machine_filename == "" || system_config_filename == "") print_help(argv[0]);
 	if (use_vms && slot_path == "") print_help(argv[0]);
 
 	if (wait_set && consec_set) {
@@ -159,16 +169,17 @@ int main(int argc, char const *argv[]) {
 														  static_cast<int>(port), 60);
 
 	controllerT *controller;
+	system_configT system_config(system_config_filename);
 
 	if (use_vms)
-		controller = new vm_controller(comm, machine_filename, slot_path);
+		controller = new vm_controller(comm, machine_filename, system_config, slot_path);
 	else
-		controller = new cgroup_controller(comm, machine_filename);
+		controller = new cgroup_controller(comm, machine_filename, system_config);
 
 	schedulerT *sched = nullptr;
-	if (use_multi_sched) sched = new multi_app_sched();
-	if (use_multi_sched_consec) sched = new multi_app_sched_consec();
-	if (sched == nullptr) sched = new two_app_sched();
+	if (use_multi_sched) sched = new multi_app_sched(system_config);
+	if (use_multi_sched_consec) sched = new multi_app_sched_consec(system_config);
+	if (sched == nullptr) sched = new two_app_sched(system_config);
 
 	// Create Time_measurement instance
 	fast::msg::migfra::Time_measurement timers(true, "timestamps");
